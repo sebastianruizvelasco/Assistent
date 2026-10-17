@@ -1,0 +1,123 @@
+# Contexto de AURA para continuar en otro chat
+
+## Objetivo
+
+AURA es un asistente personal con calendario. La meta es que la persona pueda organizar su agenda en lenguaje natural, revisar proyectos y memorias, y mantener control manual sobre las decisiones de la IA.
+
+El usuario quiere que el próximo chat lea este documento y pueda responder preguntas o seguir trabajando sobre el proyecto sin volver a reunir todo el historial de conversaciones.
+
+## Proyecto
+
+- Ruta del proyecto: `Assistent/`
+- Tecnologías: React 19, TypeScript 6, Vite 8.
+- Archivo principal: `src/App.tsx`.
+- Estilos: `src/App.css` y `src/index.css`.
+- Proxy de IA: middleware de desarrollo definido en `vite.config.ts`, endpoint `/api/assistant`.
+- Persistencia local en `localStorage` más autenticación opcional con Supabase Auth y sincronización cloud en una fila JSONB por usuario.
+- Seguridad de datos cloud: `supabase/schema.sql` habilita RLS y limita cada fila al usuario autenticado.
+- Si no hay variables Supabase, la pantalla permite continuar en modo local.
+- API keys de IA nunca se suben; se guardan localmente bajo claves separadas por usuario cuando se usa cloud.
+- Scripts: `npm run dev`, `npm run build`, `npm run lint`.
+
+## Funciones implementadas
+
+### Calendario
+
+- Vistas de día, semana, mes y año.
+- Crear eventos haciendo clic o arrastrando sobre el calendario; mover eventos con drag and drop.
+- La fecha se calcula con la zona horaria local del navegador.
+- Si el usuario no indica fecha al agendar, se usa hoy cuando la hora sigue pendiente y mañana cuando ya pasó.
+- Semana: filas horarias de 1 AM a 12 PM; los eventos se colocan según hora y duración.
+- Mes: muestra hora, título y duración; limita los eventos visibles y agrupa el resto con “+ más”.
+- Año: los días con eventos llevan marcador y exponen hora, título y duración como detalle accesible.
+- Conflictos, prioridad, tareas completadas, filtros y recordatorios del navegador.
+
+### Flexibilidad, duración y recordatorios
+
+- La flexibilidad del evento puede ser fija, un margen en minutos o una ventana de fecha y hora.
+- En una ventana, AURA busca un hueco libre en intervalos de 15 minutos que quepa en la duración solicitada.
+- El organizador del día no mueve eventos fijos ni sale de la flexibilidad guardada.
+- Duración personalizada como número y unidad: minutos u horas.
+- Recordatorio personalizado como número y unidad: minutos u horas antes.
+
+### Repeticiones
+
+- Recurrencias diarias, semanales o mensuales, generadas para aproximadamente un año.
+- Cada fecha es una ocurrencia independiente; “Eliminar solo este día” no borra las demás.
+- Cada serie nueva usa un `seriesId`; el menú también permite “Eliminar serie”.
+- Las repeticiones mensuales conservan el día del mes y se ajustan al último día existente cuando ese mes es más corto.
+- AURA puede crear una serie con horarios distintos por grupos de días. Ejemplo: lunes a viernes a las 16:00 y sábado/domingo a las 07:30.
+- AURA puede editar los horarios de una serie existente y conserva las ocurrencias que ya fueron borradas.
+- Días en el contrato interno: 0 domingo, 1 lunes, ..., 6 sábado.
+
+### Asistente IA
+
+- Chat en español con historial persistente.
+- Proveedores soportados por el proxy: OpenRouter, OpenAI, Google Gemini y Anthropic.
+- Configuración de claves/modelos desde el panel del asistente; también existen opciones por variables de entorno.
+- El asistente puede crear tareas/eventos, crear series, editar series, proponer organización diaria y responder preguntas con contexto de la agenda y memorias.
+- Las solicitudes de calendario devuelven acciones estructuradas y la app las aplica al estado de eventos; no basta con que el modelo diga que las agendó.
+- Las llamadas reales requieren configurar una clave válida del proveedor.
+
+### Conversaciones
+
+- Las sesiones se guardan en `localStorage` bajo `aura-conversations` y la sesión activa bajo `aura-active-conversation`.
+- Se conserva compatibilidad con el historial anterior `aura-conversation`.
+- El usuario puede crear una conversación nueva, duplicar la activa y alternar entre sesiones.
+- La copia conserva los mensajes y luego es independiente de la original.
+- El selector se bloquea mientras el modelo procesa una solicitud.
+- Esta función duplica conversaciones dentro de AURA; no clona una sesión de GitHub Copilot/VS Code.
+
+### Inicio de sesión y sincronización
+
+- Supabase Auth permite crear cuenta e iniciar/cerrar sesión con correo/contraseña o Google cuando se configuran `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` y se habilita OAuth Google en el dashboard.
+- `src/supabase.ts` crea el cliente solo si ambas variables están presentes.
+- `supabase/schema.sql` crea `public.aura_user_data`, con una fila JSONB por usuario y políticas RLS para `select`, `insert` y `update`.
+- AURA sincroniza eventos, proyectos, memorias, conversaciones, preferencias de calendario y modelos IA seleccionados con debounce.
+- Las claves API de IA se excluyen del snapshot cloud y se mantienen localmente por usuario autenticado.
+- El primer acceso cloud en un navegador puede migrar la caché local una vez; las cuentas nuevas siguientes comienzan con datos iniciales separados.
+- Al cerrar sesión se espera a guardar el snapshot final y se borra la caché compartida de agenda del navegador; los datos permanecen en la cuenta Supabase.
+- Para activarlo, configurar `.env` a partir de `.env.example`, ejecutar `supabase/schema.sql`, habilitar Email/Google en Supabase y configurar el callback Google `${SUPABASE_URL}/auth/v1/callback` y las URLs de retorno permitidas.
+
+### Otras áreas
+
+- Proyectos y memorias personales en localStorage y snapshot cloud cuando Supabase está activo.
+- Tema claro/oscuro, reloj y zona horaria local, clima y ubicación si el navegador los permite.
+- Notificaciones del navegador sujetas a permiso.
+
+## Arquitectura relevante
+
+- La mayor parte de la interfaz, estado, lógica de calendario y manejo de IA está actualmente concentrada en `src/App.tsx`.
+- `EventItem` contiene el modelo de evento, incluidos campos opcionales de recurrencia, flexibilidad, recordatorio y `seriesId`.
+- La organización diaria usa `validateSchedule` para validar horas, solapamientos y límites antes de aplicar una propuesta.
+- La búsqueda de espacio libre usa `findAvailableSlot` y la duración se normaliza con `durationToMinutes`.
+- Los comandos de IA pasan por `applyCommand`; sus respuestas se parsean como acciones JSON antes de cambiar el calendario.
+- `vite.config.ts` implementa el proxy de desarrollo de IA. Las claves introducidas en el panel se guardan en el navegador y no se sincronizan a Supabase.
+- `src/supabase.ts` implementa la conexión opcional a Auth/Postgres.
+
+## Validación reciente
+
+- `npm run build`: pasa.
+- `npm run lint`: pasa sin advertencias en la última verificación.
+- `get_errors` sobre `src/App.tsx`: sin errores.
+- Pruebas de navegador realizadas para: agenda en ventana flexible, duración personalizada, repetición diaria, eliminación individual, creación/edición de series IA con endpoint simulado, detalle temporal en vistas de calendario y duplicación/persistencia de conversaciones.
+- Las pruebas del proveedor IA fueron simuladas; no verifican una llamada externa ni requieren exponer una clave.
+
+## Pendientes / límites conocidos
+
+- No existe sincronización con Google Calendar ni Outlook.
+- La autenticación/sincronización Supabase requiere que el usuario cree y configure su proyecto y variables locales; no hay credenciales de proyecto incluidas en el repositorio.
+- Las recurrencias se generan por un año; no son reglas infinitas de calendario.
+- La edición por IA de series requiere series creadas con `seriesId`; series antiguas sin ese identificador pueden no ser elegibles para edición automática.
+- La organización automática del día opera sobre el día seleccionado; no debe mover eventos a otras fechas.
+- Las llamadas reales a modelos deben probarse con la clave API configurada por el usuario.
+- Validar el flujo cloud de registro, confirmación de email y sincronización después de configurar un proyecto Supabase real.
+
+## Para el próximo chat
+
+1. Lee este archivo y luego inspecciona `src/App.tsx` y `src/App.css` antes de asumir que el código sigue exactamente igual.
+2. Ejecuta `npm run build` y `npm run lint` después de cambios.
+3. Mantén la zona horaria local al interpretar fechas y horas.
+4. No confirmes acciones de IA sin aplicar y guardar los cambios correspondientes.
+5. Conserva la aprobación del usuario cuando la IA vaya a reorganizar eventos existentes.
+6. No reemplaces ni borres cambios del usuario que no estén relacionados con la solicitud.
