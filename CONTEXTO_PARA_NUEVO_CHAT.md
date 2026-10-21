@@ -10,7 +10,7 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 - Ruta del proyecto: `Assistent/`
 - Tecnologías: React 19, TypeScript 6, Vite 8.
-- Archivo principal: `src/App.tsx`.
+- Punto de entrada: `src/App.tsx` (acceso y sincronización); la interfaz principal está en `src/components/PlannerApp.tsx`. Ver “Estructura del código”.
 - Estilos: `src/App.css` y `src/index.css`.
 - Proxy de IA: middleware de desarrollo definido en `vite.config.ts`, endpoint `/api/assistant`.
 - Persistencia local en `localStorage` más autenticación opcional con Supabase Auth y sincronización cloud en una fila JSONB por usuario.
@@ -87,13 +87,21 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 ## Arquitectura relevante
 
-- La mayor parte de la interfaz, estado, lógica de calendario y manejo de IA está actualmente concentrada en `src/App.tsx`.
+- El código se dividió en módulos pequeños (ver “Estructura del código”). `PlannerApp` es el contenedor: guarda el estado y los manejadores y compone los componentes de presentación.
 - `EventItem` contiene el modelo de evento, incluidos campos opcionales de recurrencia, flexibilidad, recordatorio y `seriesId`.
-- La organización diaria usa `validateSchedule` para validar horas, solapamientos y límites antes de aplicar una propuesta.
+- La organización diaria (`organizeSelectedDay` en `src/hooks/useAssistant.ts`) usa `validateSchedule` (`src/lib/schedule.ts`) para validar horas, solapamientos y límites antes de aplicar una propuesta.
 - La búsqueda de espacio libre usa `findAvailableSlot` y la duración se normaliza con `durationToMinutes`.
-- Los comandos de IA pasan por `applyCommand`; sus respuestas se parsean como acciones JSON antes de cambiar el calendario.
+- Los comandos de IA pasan por `applyCommand` (`src/hooks/useAssistant.ts`); sus respuestas se parsean como acciones JSON antes de cambiar el calendario.
 - `vite.config.ts` implementa el proxy de desarrollo de IA. Las claves introducidas en el panel se guardan en el navegador y no se sincronizan a Supabase.
 - `src/supabase.ts` implementa la conexión opcional a Auth/Postgres.
+
+## Estructura del código
+
+- `src/App.tsx`: sesión de Supabase, carga/guardado del snapshot y elección de pantalla (acceso o agenda).
+- `src/types.ts`, `src/constants.ts`, `src/initialData.ts`: tipos, catálogos de modelos y datos iniciales.
+- `src/lib/`: lógica pura sin React. `dates.ts` (fechas locales), `schedule.ts` (duraciones, recordatorios, huecos libres, series, validación del horario), `snapshot.ts` (lectura/mezcla de datos locales y cloud), `assistant.ts` (prompt, llamada a `/api/assistant`, lectura de la acción JSON).
+- `src/hooks/`: `useAssistant` (`applyCommand`, `organizeSelectedDay`), `useCloudSync`, `useLocalPersistence`, `useReminders`, `useClock`, `useWeather`, `useNotice`.
+- `src/components/`: `PlannerApp` (contenedor), `Topbar`, `CalendarHeader`, `CalendarBody` (vistas día/semana/mes/año), `ProductivityPanel`, `AssistantPanel`, `AddEventModal`, `SectionHub` (Proyectos y Memoria), `AuthScreen`, `LoadingScreen`.
 
 ## Validación reciente
 
@@ -115,7 +123,7 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 ## Para el próximo chat
 
-1. Lee este archivo y luego inspecciona `src/App.tsx` y `src/App.css` antes de asumir que el código sigue exactamente igual.
+1. Lee este archivo y luego inspecciona `src/components/PlannerApp.tsx`, `src/hooks/` y `src/App.css` antes de asumir que el código sigue exactamente igual.
 2. Ejecuta `npm run build` y `npm run lint` después de cambios.
 3. Mantén la zona horaria local al interpretar fechas y horas.
 4. No confirmes acciones de IA sin aplicar y guardar los cambios correspondientes.

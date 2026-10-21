@@ -38,7 +38,9 @@ La clave `anon`/publishable de Supabase está diseñada para el cliente y queda 
 
 - React 19, TypeScript y Vite.
 - Supabase Auth para correo/contraseña y Postgres JSONB con Row Level Security para sincronización.
-- `src/App.tsx`: aplicación, calendario, asistente y sincronización.
+- `src/App.tsx`: sesión, acceso y sincronización con Supabase.
+- `src/components/`: interfaz (`PlannerApp` es el contenedor; calendario, asistente, modal de eventos, proyectos y memoria son componentes propios).
+- `src/hooks/` y `src/lib/`: lógica del asistente, sincronización, recordatorios, fechas y horarios.
 - `src/supabase.ts`: cliente opcional de Supabase.
 - `src/App.css`: estilos de la aplicación y acceso.
 
