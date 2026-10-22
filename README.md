@@ -27,6 +27,34 @@ npm run lint
 
 La clave `anon`/publishable de Supabase está diseñada para el cliente y queda protegida por RLS. **Nunca** pongas una clave `service_role` en una variable `VITE_*` ni en el frontend.
 
+## Sincronizar con Google Calendar
+
+AURA se sincroniza en dos vías con tu calendario principal de Google: lo que creas o cambias en AURA aparece en Google Calendar y viceversa. No necesita servidor propio: usa el inicio de sesión de Google en el navegador y no hay ningún secreto que proteger.
+
+### Configuración (una sola vez)
+
+1. En [Google Cloud Console](https://console.cloud.google.com/) usa el proyecto que ya creaste para el login con Google de Supabase, o crea uno nuevo.
+2. **APIs y servicios > Biblioteca**: busca **Google Calendar API** y pulsa **Habilitar**.
+3. **APIs y servicios > Pantalla de consentimiento de OAuth** (en el menú nuevo: *Google Auth Platform*): tipo de usuario **Externo**, nombre `AURA` y tu correo. En **Acceso a los datos** añade los permisos `.../auth/calendar.events` y `.../auth/userinfo.email`. En **Público** (o *Usuarios de prueba*) añade tu cuenta de Gmail: mientras la app esté en modo de prueba solo esas cuentas pueden conectarse.
+4. **Credenciales > Crear credenciales > ID de cliente de OAuth**, tipo **Aplicación web**. En **Orígenes autorizados de JavaScript** añade `http://localhost:5173` y, si la publicas, la URL de producción. No hace falta URI de redirección.
+5. Copia el ID de cliente (`...apps.googleusercontent.com`) en tu `.env` como `VITE_GOOGLE_CLIENT_ID` y reinicia `npm run dev`.
+6. En AURA abre tu avatar y pulsa **Conectar Google Calendar**. Google mostrará "Google no ha verificado esta aplicación": es normal en modo de prueba; elige **Avanzado > Ir a AURA** y deja marcadas todas las casillas.
+
+### Cómo funciona
+
+- **Qué se sincroniza:** título, fecha, hora, duración y recordatorio. Prioridad, categoría, etiqueta, lugar, "completado" y flexibilidad solo existen en AURA.
+- **Ventana:** desde 30 días atrás hasta 400 días adelante, solo el calendario principal.
+- **Primera vez:** AURA te muestra cuántos eventos enviará e importará y pide confirmación antes de escribir nada (así los eventos de ejemplo no se cuelan en tu calendario real sin que lo decidas).
+- **Cambios automáticos:** unos segundos después de editar algo en AURA, y cada 5 minutos para traer lo que cambió en Google. También tienes **Sincronizar ahora** en el menú del perfil.
+- **Conflictos:** si cambias el mismo evento en los dos lados entre dos sincronizaciones, gana la versión de Google.
+- **Borrados:** se propagan en ambos sentidos. Si una sincronización fuera a borrar más de 5 eventos de golpe (en Google o en AURA), AURA pide confirmación y no actúa sola.
+- **Se omiten** los eventos de día completo y los de más de 24 h, porque AURA trabaja con franjas horarias. Las series de AURA se envían como eventos individuales, y las repeticiones de Google se importan como ocurrencias sueltas.
+- **Duración de la conexión:** Google concede un acceso de ~1 hora. Al caducar, AURA deja de sincronizar (sin perder nada) y en el perfil aparece **Reconectar**; si tu sesión de Google sigue abierta, la ventana se cierra casi al instante. Evitarlo requeriría un servidor que guarde un refresh token.
+
+### Privacidad
+
+El token de acceso solo vive en la memoria de la pestaña; nunca se guarda ni se sube a Supabase. Junto a cada evento vinculado se guardan el correo de la cuenta de Google y el id del evento espejo (y se sincronizan con tu Supabase si lo usas). **Desconectar** revoca el acceso y limpia el estado de sincronización, pero conserva tus eventos en AURA y en Google.
+
 ## Almacenamiento y privacidad
 
 - Eventos, proyectos, memorias y conversaciones se sincronizan como un documento JSONB compacto por usuario.
@@ -40,7 +68,7 @@ La clave `anon`/publishable de Supabase está diseñada para el cliente y queda 
 - Supabase Auth para correo/contraseña y Postgres JSONB con Row Level Security para sincronización.
 - `src/App.tsx`: sesión, acceso y sincronización con Supabase.
 - `src/components/`: interfaz (`PlannerApp` es el contenedor; calendario, asistente, modal de eventos, proyectos y memoria son componentes propios).
-- `src/hooks/` y `src/lib/`: lógica del asistente, sincronización, recordatorios, fechas y horarios.
+- `src/hooks/` y `src/lib/`: lógica del asistente, sincronización con la nube y con Google Calendar, recordatorios, fechas y horarios.
 - `src/supabase.ts`: cliente opcional de Supabase.
 - `src/App.css`: estilos de la aplicación y acceso.
 

@@ -1,5 +1,8 @@
 
 
+// Vínculo de un evento de AURA con su evento espejo en Google Calendar.
+export type GoogleLink = { id: string; account: string; hash: string; updated: string }
+
 export type EventItem = {
   id: number
   date: string
@@ -18,6 +21,7 @@ export type EventItem = {
   priority?: 'alta' | 'media' | 'baja'
   tag?: string
   completed?: boolean
+  google?: GoogleLink
 }
 
 export type CalendarView = 'day' | 'week' | 'month' | 'year'

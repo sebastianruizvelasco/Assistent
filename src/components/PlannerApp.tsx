@@ -8,6 +8,7 @@ import { SectionHub } from './SectionHub'
 import { Topbar } from './Topbar'
 import { availableModels, providerModels } from '../constants'
 import { useAssistant } from '../hooks/useAssistant'
+import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
 import { useClock } from '../hooks/useClock'
 import { useCloudSync } from '../hooks/useCloudSync'
 import { useLocalPersistence } from '../hooks/useLocalPersistence'
@@ -73,6 +74,7 @@ export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, loc
   const [projectFormOpen, setProjectFormOpen] = useState(false)
   const [memoryFormOpen, setMemoryFormOpen] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
+  const [pendingMessage, setPendingMessage] = useState('')
   const { localTime, timeZone } = useClock()
   const { temperature, city } = useWeather()
   const { notice, showNotice } = useNotice()
@@ -98,8 +100,11 @@ export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, loc
 
   const confirmAction = (message: string, action: () => void) => {
     setPendingAction(() => action)
+    setPendingMessage(message)
     showNotice(message)
   }
+
+  const google = useGoogleCalendar({ events, setEvents, showNotice, confirmAction, timeZone })
 
   const toggleVoice = () => {
     setVoiceActive((current) => !current)
@@ -162,7 +167,7 @@ export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, loc
     const event = events.find((item) => item.id === eventId)
     if (!event) return
     const duplicateId = Math.max(0, ...events.map((item) => item.id)) + 1
-    setEvents((current) => [...current, { ...event, id: duplicateId, title: `${event.title} (copia)` }])
+    setEvents((current) => [...current, { ...event, id: duplicateId, title: `${event.title} (copia)`, google: undefined }])
     setEventMenuId(null)
     showNotice('He creado una copia del evento.')
   }
@@ -396,7 +401,7 @@ export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, loc
 
   return (
     <main className={`app-shell ${darkMode ? 'dark-mode' : ''}`}>
-      <Topbar activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} userEmail={userEmail} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} />
+      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} userEmail={userEmail} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} />
 
       <div className="workspace">
         {activeSection !== 'Mi día' && <SectionHub activeSection={activeSection} setProjectFormOpen={setProjectFormOpen} projects={projects} projectFormOpen={projectFormOpen} addProject={addProject} setMemoryFormOpen={setMemoryFormOpen} memories={memories} memoryFormOpen={memoryFormOpen} addMemory={addMemory} />}
@@ -409,7 +414,7 @@ export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, loc
         <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} showNotice={showNotice} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={voiceActive} toggleVoice={toggleVoice} />
       </div>
       {notice && <div className="notice" role="status">{notice}</div>}
-      {pendingAction && <div className="confirm-bar" role="alert"><span>¿Quieres continuar?</span><button onClick={() => { pendingAction(); setPendingAction(null) }}>Confirmar</button><button onClick={() => setPendingAction(null)}>Cancelar</button></div>}
+      {pendingAction && <div className="confirm-bar" role="alert"><span>{pendingMessage || '¿Quieres continuar?'}</span><button onClick={() => { pendingAction(); setPendingAction(null); setPendingMessage('') }}>Confirmar</button><button onClick={() => { setPendingAction(null); setPendingMessage('') }}>Cancelar</button></div>}
       <AddEventModal addEventOpen={addEventOpen} setAddEventOpen={setAddEventOpen} addEvent={addEvent} formEventId={formEventId} events={events} newEventDate={newEventDate} newEventTime={newEventTime} newEventDuration={newEventDuration} flexibilityMode={flexibilityMode} setFlexibilityMode={setFlexibilityMode} reminderCustomEnabled={reminderCustomEnabled} setReminderCustomEnabled={setReminderCustomEnabled} requestNotifications={requestNotifications} />
       <footer><span>Planificado con intención</span><span>Última sincronización: ahora</span></footer>
     </main>

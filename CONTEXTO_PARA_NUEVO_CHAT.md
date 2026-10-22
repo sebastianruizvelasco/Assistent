@@ -79,6 +79,15 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 - Al cerrar sesión se espera a guardar el snapshot final y se borra la caché compartida de agenda del navegador; los datos permanecen en la cuenta Supabase.
 - Para activarlo, configurar `.env` a partir de `.env.example`, ejecutar `supabase/schema.sql`, habilitar Email/Google en Supabase y configurar el callback Google `${SUPABASE_URL}/auth/v1/callback` y las URLs de retorno permitidas.
 
+### Google Calendar (dos vías)
+
+- Se activa con `VITE_GOOGLE_CLIENT_ID` (cliente OAuth Web de Google Cloud, sin secreto) y el botón del menú de perfil. Usa Google Identity Services (token de ~1 h en memoria, sin refresh token) con los permisos `calendar.events` y `userinfo.email`.
+- Cada evento sincronizado lleva `google: { id, account, hash, updated }`. `hash` resume título/fecha/hora/duración/recordatorio para saber si cambió en AURA; `updated` es la marca de Google para saber si cambió allí. Si cambian ambos, gana Google.
+- El borrado en AURA se detecta comparando contra la lista de ids vinculados de la última sincronización (`aura-google-known:<cuenta>` en localStorage). Más de 5 borrados en un lado exigen confirmación; la primera sincronización siempre la pide.
+- Los eventos que AURA crea en Google llevan `extendedProperties.private.auraId` para poder revincularlos si se pierde el vínculo y para que un segundo dispositivo conserve el mismo id.
+- Se omiten eventos de día completo y de más de 24 h. Ventana: 30 días atrás a 400 adelante.
+- Código: `src/lib/googleCalendar.ts` (planificación pura + cliente de la API), `src/lib/googleAuth.ts`, `src/hooks/useGoogleCalendar.ts`, `src/components/GoogleCalendarMenu.tsx`. Duplicar un evento elimina el vínculo (`google: undefined`); cualquier código que clone eventos debe hacer lo mismo.
+
 ### Otras áreas
 
 - Proyectos y memorias personales en localStorage y snapshot cloud cuando Supabase está activo.
@@ -100,8 +109,8 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 - `src/App.tsx`: sesión de Supabase, carga/guardado del snapshot y elección de pantalla (acceso o agenda).
 - `src/types.ts`, `src/constants.ts`, `src/initialData.ts`: tipos, catálogos de modelos y datos iniciales.
 - `src/lib/`: lógica pura sin React. `dates.ts` (fechas locales), `schedule.ts` (duraciones, recordatorios, huecos libres, series, validación del horario), `snapshot.ts` (lectura/mezcla de datos locales y cloud), `assistant.ts` (prompt, llamada a `/api/assistant`, lectura de la acción JSON).
-- `src/hooks/`: `useAssistant` (`applyCommand`, `organizeSelectedDay`), `useCloudSync`, `useLocalPersistence`, `useReminders`, `useClock`, `useWeather`, `useNotice`.
-- `src/components/`: `PlannerApp` (contenedor), `Topbar`, `CalendarHeader`, `CalendarBody` (vistas día/semana/mes/año), `ProductivityPanel`, `AssistantPanel`, `AddEventModal`, `SectionHub` (Proyectos y Memoria), `AuthScreen`, `LoadingScreen`.
+- `src/hooks/`: `useAssistant` (`applyCommand`, `organizeSelectedDay`), `useGoogleCalendar`, `useCloudSync`, `useLocalPersistence`, `useReminders`, `useClock`, `useWeather`, `useNotice`.
+- `src/components/`: `PlannerApp` (contenedor), `Topbar`, `CalendarHeader`, `CalendarBody` (vistas día/semana/mes/año), `ProductivityPanel`, `AssistantPanel`, `AddEventModal`, `SectionHub` (Proyectos y Memoria), `AuthScreen`, `LoadingScreen`, `GoogleCalendarMenu`.
 
 ## Validación reciente
 
@@ -113,7 +122,9 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 ## Pendientes / límites conocidos
 
-- No existe sincronización con Google Calendar ni Outlook.
+- No existe sincronización con Outlook.
+- Google Calendar: la lógica se probó contra un Google simulado en memoria (paginación, cuota, 401/403, dos dispositivos, cambio de cuenta, borrados masivos) y el flujo completo de la interfaz, pero **no contra el servicio real**. Falta validar con un ID de cliente real.
+- Google Calendar: sin servidor no hay refresh token; la conexión caduca en ~1 h y hay que pulsar «Reconectar».
 - La autenticación/sincronización Supabase requiere que el usuario cree y configure su proyecto y variables locales; no hay credenciales de proyecto incluidas en el repositorio.
 - Las recurrencias se generan por un año; no son reglas infinitas de calendario.
 - La edición por IA de series requiere series creadas con `seriesId`; series antiguas sin ese identificador pueden no ser elegibles para edición automática.
