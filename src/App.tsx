@@ -5,6 +5,7 @@ import { AuthScreen } from './components/AuthScreen'
 import type { AuthMode } from './components/AuthScreen'
 import { LoadingScreen } from './components/LoadingScreen'
 import { PlannerApp } from './components/PlannerApp'
+import { profileFromUser } from './lib/profile'
 import { createEmptyAppSnapshot, mergeAiSettings, readLocalAppSnapshot, snapshotForCloud } from './lib/snapshot'
 import type { AppSnapshot } from './types'
 import './App.css'
@@ -126,7 +127,7 @@ function App() {
   if (localMode) return <PlannerApp onSignOut={() => setLocalMode(false)} />
   if (!sessionReady) return <LoadingScreen title="Comprobando sesión…" />
   if (session && !snapshot && !authMessage) return <LoadingScreen title="Cargando tu agenda…" />
-  if (session && snapshot) return <PlannerApp key={session.user.id} snapshot={snapshot} userEmail={session.user.email} localApiKeyStorageKey={`aura-ai-settings:${session.user.id}`} onSignOut={() => { void signOut() }} onSaveSnapshot={saveSnapshot} />
+  if (session && snapshot) return <PlannerApp key={session.user.id} snapshot={snapshot} user={profileFromUser(session.user)} localApiKeyStorageKey={`aura-ai-settings:${session.user.id}`} onSignOut={() => { void signOut() }} onSaveSnapshot={saveSnapshot} />
   if (session && authMessage) return <div className="auth-screen"><div className="auth-panel"><p className="eyebrow">AURA · SINCRONIZACIÓN</p><h1>No se pudo cargar la cuenta</h1><p className="auth-description">{authMessage}</p><button type="button" className="auth-submit" onClick={() => setLocalMode(true)}>Continuar en este dispositivo</button><button type="button" className="auth-mode-button" onClick={() => { void signOut() }}>Cerrar sesión</button></div></div>
 
   return <AuthScreen authMode={authMode} setAuthMode={setAuthMode} email={email} setEmail={setEmail} password={password} setPassword={setPassword} authBusy={authBusy} authMessage={authMessage} setAuthMessage={setAuthMessage} signInWithGoogle={signInWithGoogle} submitAuth={submitAuth} setLocalMode={setLocalMode} />

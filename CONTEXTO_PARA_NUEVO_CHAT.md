@@ -108,9 +108,9 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 - `src/App.tsx`: sesión de Supabase, carga/guardado del snapshot y elección de pantalla (acceso o agenda).
 - `src/types.ts`, `src/constants.ts`, `src/initialData.ts`: tipos, catálogos de modelos y datos iniciales.
-- `src/lib/`: lógica pura sin React. `dates.ts` (fechas locales), `schedule.ts` (duraciones, recordatorios, huecos libres, series, validación del horario), `snapshot.ts` (lectura/mezcla de datos locales y cloud), `assistant.ts` (prompt, llamada a `/api/assistant`, lectura de la acción JSON).
+- `src/lib/`: lógica pura sin React. `dates.ts` (fechas locales), `schedule.ts` (duraciones, recordatorios, huecos libres, series, validación del horario), `snapshot.ts` (lectura/mezcla de datos locales y cloud), `profile.ts` (nombre, foto e iniciales del usuario a partir de la cuenta de Supabase/Google), `assistant.ts` (prompt, llamada a `/api/assistant`, lectura de la acción JSON).
 - `src/hooks/`: `useAssistant` (`applyCommand`, `organizeSelectedDay`), `useGoogleCalendar`, `useCloudSync`, `useLocalPersistence`, `useReminders`, `useClock`, `useWeather`, `useNotice`.
-- `src/components/`: `PlannerApp` (contenedor), `Topbar`, `CalendarHeader`, `CalendarBody` (vistas día/semana/mes/año), `ProductivityPanel`, `AssistantPanel`, `AddEventModal`, `SectionHub` (Proyectos y Memoria), `AuthScreen`, `LoadingScreen`, `GoogleCalendarMenu`.
+- `src/components/`: `PlannerApp` (contenedor), `Topbar`, `CalendarHeader`, `CalendarBody` (vistas día/semana/mes/año), `ProductivityPanel`, `AssistantPanel`, `AddEventModal`, `SectionHub` (Proyectos y Memoria), `AuthScreen`, `LoadingScreen`, `UserMenu` (botón con el nombre del usuario y su menú), `GoogleCalendarMenu`.
 
 ## Validación reciente
 

@@ -9,6 +9,8 @@ import { Topbar } from './Topbar'
 import { availableModels, providerModels } from '../constants'
 import { useAssistant } from '../hooks/useAssistant'
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
+import { profileFromUser } from '../lib/profile'
+import type { UserProfile } from '../lib/profile'
 import { useClock } from '../hooks/useClock'
 import { useCloudSync } from '../hooks/useCloudSync'
 import { useLocalPersistence } from '../hooks/useLocalPersistence'
@@ -21,7 +23,8 @@ import { durationToMinutes, findAvailableSlot, validateSchedule } from '../lib/s
 import { mergeAiSettings, readStored, snapshotForCloud } from '../lib/snapshot'
 import type { AiSettings, AppSnapshot, CalendarView, ConversationMessage, ConversationSession, EventItem, Memory, Project, ScheduleChange } from '../types'
 
-export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, localApiKeyStorageKey }: { snapshot?: AppSnapshot; userEmail?: string; onSignOut?: () => void; onSaveSnapshot?: (data: AppSnapshot) => Promise<void>; localApiKeyStorageKey?: string }) {
+export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot, localApiKeyStorageKey }: { snapshot?: AppSnapshot; user?: UserProfile; onSignOut?: () => void; onSaveSnapshot?: (data: AppSnapshot) => Promise<void>; localApiKeyStorageKey?: string }) {
+  const user = userProp ?? profileFromUser(null)
   const aiSettingsStorageKey = localApiKeyStorageKey || 'aura-ai-settings'
   const [events, setEvents] = useState<EventItem[]>(() => snapshot?.events || readStored('aura-events', buildInitialEvents()))
   const [message, setMessage] = useState('')
@@ -401,7 +404,7 @@ export function PlannerApp({ snapshot, userEmail, onSignOut, onSaveSnapshot, loc
 
   return (
     <main className={`app-shell ${darkMode ? 'dark-mode' : ''}`}>
-      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} userEmail={userEmail} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} />
+      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} />
 
       <div className="workspace">
         {activeSection !== 'Mi día' && <SectionHub activeSection={activeSection} setProjectFormOpen={setProjectFormOpen} projects={projects} projectFormOpen={projectFormOpen} addProject={addProject} setMemoryFormOpen={setMemoryFormOpen} memories={memories} memoryFormOpen={memoryFormOpen} addMemory={addMemory} />}
