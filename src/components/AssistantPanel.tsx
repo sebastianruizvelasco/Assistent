@@ -1,6 +1,8 @@
-import { type Dispatch, type SetStateAction } from 'react'
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
 import { providerLabels, providerModels, providerOrder, suggestions } from '../constants'
 import type { AiSettings, ConversationMessage, ConversationSession, EventItem, ScheduleChange } from '../types'
+import { LogoMark } from './Logo'
+import { CopyIcon, MicIcon, PlusIcon, SendIcon, SettingsIcon, SparkIcon } from './Icons'
 
 type AssistantPanelProps = {
   activeSection: string
@@ -41,17 +43,102 @@ export function AssistantPanel({
   conversationSessions, duplicateCurrentConversation, startNewConversation, message, setMessage,
   voiceActive, toggleVoice
 }: AssistantPanelProps) {
-  return (
-    <aside className={`assistant-panel ${activeSection !== 'Mi día' ? 'section-hidden' : ''}`}>
-          <div className="assistant-header"><div className="assistant-title"><span className="spark">✦</span><div><p className="eyebrow">AURA AI</p><h2>Tu copiloto</h2><div className="ai-setup-row"><select className="provider-select" aria-label="Proveedor de IA" value={selectedProvider} onChange={(event) => handleProviderChange(event.target.value as keyof typeof providerModels)}>{providerOrder.map((provider) => <option key={provider} value={provider}>{providerLabels[provider]}</option>)}</select><button type="button" className="settings-link" onClick={() => setAiSettingsOpen((current) => !current)}>Claves IA</button></div><select className="model-select" aria-label="Modelo de IA" value={selectedModel} onChange={(event) => { setSelectedModel(event.target.value); setAiSettings((current) => ({ ...current, [selectedProvider]: { ...current[selectedProvider], model: event.target.value } })) }}>{providerModels[selectedProvider].map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}</select></div></div><span className="online-dot">En línea</span></div>
-          {aiSettingsOpen && <div className="ai-settings-panel">{providerOrder.map((provider) => <label key={provider} className="ai-key-field"><span>{providerLabels[provider]}</span><input type="password" value={aiSettings[provider].apiKey} onChange={(event) => updateAiSetting(provider, 'apiKey', event.target.value)} placeholder={`Pega la clave de ${providerLabels[provider]}`} /></label>)}<div className="ai-settings-actions"><button type="button" className="secondary-action" onClick={() => setAiSettingsOpen(false)}>Cerrar</button><button type="button" className="primary-action" onClick={() => { setAiSettingsOpen(false); showNotice('Credenciales guardadas en tu navegador.') }}>Guardar</button></div></div>}
-          {scheduleProposal && <div className="schedule-proposal"><strong>Propuesta para {scheduleProposal.date}</strong><ul>{scheduleProposal.changes.map((change) => { const event = events.find((item) => item.id === change.id); return event ? <li key={change.id}><span>{event.title}</span><span>{event.time} → {change.time}</span></li> : null })}</ul><div><button onClick={() => setScheduleProposal(null)}>Descartar</button><button className="proposal-apply" disabled={scheduleProposal.date !== selectedDateKey} onClick={applyScheduleProposal}>Aplicar horario</button></div></div>}
-          <div className="conversation">{conversation.map((item, index) => <div key={`${item.text}-${index}`} className={`message ${item.from}`}><p>{item.text}</p></div>)}{isThinking && <div className="message assistant thinking"><div className="typing-indicator" aria-label="El modelo está escribiendo"><span className="dot one" /><span className="dot two" /><span className="dot three" /></div></div>}<div className="suggestions">{suggestions.map((suggestion) => <button key={suggestion} disabled={isThinking} onClick={() => applyCommand(suggestion)}>{suggestion}</button>)}</div></div>
-          <div className="conversation-controls"><select aria-label="Conversaciones guardadas" disabled={isThinking} value={activeConversationId} onChange={(event) => { setActiveConversationId(event.target.value); setScheduleProposal(null) }}>{conversationSessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}</select><button type="button" className="new-chat-button" disabled={isThinking} onClick={duplicateCurrentConversation}>⧉ Duplicar conversación</button><button type="button" className="new-chat-button" disabled={isThinking} onClick={startNewConversation}>＋ Nueva conversación</button></div>
-          <form className="composer" onSubmit={(event) => { event.preventDefault(); applyCommand(message) }}><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Dile a Aura qué necesitas..." /><button type="submit" aria-label="Enviar mensaje">↗</button></form>
-          <div className={`voice-note ${voiceActive ? 'voice-active' : ''}`}><span className="wave">⌁</span><span>{voiceActive ? 'Escuchando tu instrucción...' : 'También puedes hablar con Aura'}</span><button aria-label="Activar dictado" onClick={toggleVoice}>◉</button></div>
-          <div className="insight"><span className="insight-icon">✧</span><div><strong>Una pequeña observación</strong><p>Tu tarde tiene 45 min de margen. Es un buen momento para cerrar el día sin prisa.</p></div></div>
-        </aside>
+  const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Mantiene visible el último mensaje cuando llega uno nuevo o el modelo está escribiendo.
+  useEffect(() => {
+    const node = scrollRef.current
+    if (node) node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' })
+  }, [conversation.length, isThinking, activeConversationId])
+
+  return (
+    <aside className={`assistant-panel ${activeSection !== 'Mi día' ? 'section-hidden' : ''}`} aria-label="Asistente AURA">
+      <header className="assistant-header">
+        <div className="assistant-title">
+          <LogoMark size={38} />
+          <div>
+            <p className="eyebrow">AURA AI</p>
+            <h2>Tu copiloto</h2>
+          </div>
+        </div>
+        <div className="assistant-header-actions">
+          <span className="online-dot">En línea</span>
+          <button type="button" className={`icon-button ${aiSettingsOpen ? 'active' : ''}`} aria-label="Ajustes de IA" aria-expanded={aiSettingsOpen} onClick={() => setAiSettingsOpen((current) => !current)}><SettingsIcon /></button>
+        </div>
+      </header>
+
+      <div className="assistant-model-bar">
+        <select className="provider-select" aria-label="Proveedor de IA" value={selectedProvider} onChange={(event) => handleProviderChange(event.target.value as keyof typeof providerModels)}>
+          {providerOrder.map((provider) => <option key={provider} value={provider}>{providerLabels[provider]}</option>)}
+        </select>
+        <select className="model-select" aria-label="Modelo de IA" value={selectedModel} onChange={(event) => { setSelectedModel(event.target.value); setAiSettings((current) => ({ ...current, [selectedProvider]: { ...current[selectedProvider], model: event.target.value } })) }}>
+          {providerModels[selectedProvider].map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
+        </select>
+      </div>
+
+      {aiSettingsOpen && (
+        <div className="ai-settings-panel">
+          <p className="ai-settings-title">Claves de API</p>
+          {providerOrder.map((provider) => (
+            <label key={provider} className="ai-key-field">
+              <span>{providerLabels[provider]}</span>
+              <input type="password" value={aiSettings[provider].apiKey} onChange={(event) => updateAiSetting(provider, 'apiKey', event.target.value)} placeholder={`Pega la clave de ${providerLabels[provider]}`} />
+            </label>
+          ))}
+          <div className="ai-settings-actions">
+            <button type="button" className="secondary-action" onClick={() => setAiSettingsOpen(false)}>Cerrar</button>
+            <button type="button" className="primary-action" onClick={() => { setAiSettingsOpen(false); showNotice('Credenciales guardadas en tu navegador.') }}>Guardar</button>
+          </div>
+        </div>
+      )}
+
+      {scheduleProposal && (
+        <div className="schedule-proposal">
+          <strong>Propuesta para {scheduleProposal.date}</strong>
+          <ul>
+            {scheduleProposal.changes.map((change) => {
+              const event = events.find((item) => item.id === change.id)
+              return event ? <li key={change.id}><span>{event.title}</span><span>{event.time} → {change.time}</span></li> : null
+            })}
+          </ul>
+          <div>
+            <button onClick={() => setScheduleProposal(null)}>Descartar</button>
+            <button className="proposal-apply" disabled={scheduleProposal.date !== selectedDateKey} onClick={applyScheduleProposal}>Aplicar horario</button>
+          </div>
+        </div>
+      )}
+
+      <div className="conversation-controls">
+        <select aria-label="Conversaciones guardadas" disabled={isThinking} value={activeConversationId} onChange={(event) => { setActiveConversationId(event.target.value); setScheduleProposal(null) }}>
+          {conversationSessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}
+        </select>
+        <button type="button" className="icon-button bordered" title="Duplicar conversación" aria-label="Duplicar conversación" disabled={isThinking} onClick={duplicateCurrentConversation}><CopyIcon /></button>
+        <button type="button" className="icon-button bordered" title="Nueva conversación" aria-label="Nueva conversación" disabled={isThinking} onClick={startNewConversation}><PlusIcon /></button>
+      </div>
+
+      <div className="conversation" ref={scrollRef} aria-live="polite">
+        <div className="insight">
+          <span className="insight-icon"><SparkIcon size={16} /></span>
+          <div>
+            <strong>Una pequeña observación</strong>
+            <p>Tu tarde tiene 45 min de margen. Es un buen momento para cerrar el día sin prisa.</p>
+          </div>
+        </div>
+        {conversation.map((item, index) => <div key={`${item.text}-${index}`} className={`message ${item.from}`}><p>{item.text}</p></div>)}
+        {isThinking && <div className="message assistant thinking"><div className="typing-indicator" aria-label="El modelo está escribiendo"><span className="dot one" /><span className="dot two" /><span className="dot three" /></div></div>}
+      </div>
+
+      <div className="assistant-footer">
+        <div className="suggestions">
+          {suggestions.map((suggestion) => <button key={suggestion} disabled={isThinking} onClick={() => applyCommand(suggestion)}>{suggestion}</button>)}
+        </div>
+        <form className="composer" onSubmit={(event) => { event.preventDefault(); applyCommand(message) }}>
+          <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Dile a Aura qué necesitas..." />
+          <button type="button" className={`mic-button ${voiceActive ? 'voice-active' : ''}`} aria-label="Activar dictado" aria-pressed={voiceActive} onClick={toggleVoice}><MicIcon /></button>
+          <button type="submit" className="send-button" aria-label="Enviar mensaje"><SendIcon /></button>
+        </form>
+        <p className={`voice-note ${voiceActive ? 'voice-active' : ''}`}>{voiceActive ? 'Escuchando tu instrucción...' : 'También puedes hablar con Aura'}</p>
+      </div>
+    </aside>
   )
 }
