@@ -101,6 +101,9 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
     }
     recognition.onerror = (event) => {
       if (event.error === 'aborted') return
+      // Deja rastro en la consola: el código de error distingue permiso denegado por el
+      // navegador, micrófono ocupado o falta de soporte del servicio de reconocimiento.
+      console.warn(`[AURA dictado] error: ${event.error}`)
       callbacksRef.current.onError(errorMessage(event.error))
     }
     recognition.onend = () => {
