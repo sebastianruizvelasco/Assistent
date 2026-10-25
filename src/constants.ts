@@ -1,25 +1,29 @@
-
-
 export const suggestions = ['Mueve el almuerzo a las 13:30', 'Libérame una hora esta tarde', '¿Qué tengo después de comer?']
+
+// Valor especial del selector para escribir un ID de modelo que no esté en la lista.
+// Las listas de modelos caducan rápido: el ID personalizado evita quedarse sin opciones.
+export const customModelValue = '__custom__'
+
 export const providerModels = {
   openrouter: [
-    { id: 'openai/gpt-4o-mini', name: 'GPT-4o mini' },
-    { id: 'google/gemini-2.0-flash-001', name: 'Gemini Flash' },
-    { id: 'anthropic/claude-3.5-haiku', name: 'Claude Haiku' },
-    { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B' },
+    { id: 'openai/gpt-6.1-sol', name: 'GPT-6.1 Sol' },
+    { id: 'openai/gpt-6-luna', name: 'GPT-6 Luna' },
+    { id: 'anthropic/claude-haiku-5.5', name: 'Claude Haiku 5.5' },
+    { id: 'google/gemini-4-argon', name: 'Gemini 4 Argon' },
   ],
   openai: [
-    { id: 'gpt-4o-mini', name: 'GPT-4o mini' },
-    { id: 'gpt-4.1-mini', name: 'GPT-4.1 mini' },
-    { id: 'gpt-4o', name: 'GPT-4o' },
+    { id: 'gpt-6-luna', name: 'GPT-6 Luna' },
+    { id: 'gpt-6.1-sol', name: 'GPT-6.1 Sol' },
+    { id: 'gpt-6-astra', name: 'GPT-6 Astra' },
   ],
   gemini: [
-    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
-    { id: 'gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash' },
+    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash' },
+    { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash' },
+    { id: 'gemini-4-argon', name: 'Gemini 4 Argon' },
   ],
   anthropic: [
-    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku' },
-    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+    { id: 'claude-haiku-5-5', name: 'Claude Haiku 5.5' },
+    { id: 'claude-sonnet-5-5', name: 'Claude Sonnet 5.5' },
   ],
 } as const
 export const providerLabels = {

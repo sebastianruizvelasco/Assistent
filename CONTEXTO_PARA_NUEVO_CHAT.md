@@ -58,6 +58,9 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 - El asistente puede crear tareas/eventos, crear series, editar series, proponer organización diaria y responder preguntas con contexto de la agenda y memorias.
 - Las solicitudes de calendario devuelven acciones estructuradas y la app las aplica al estado de eventos; no basta con que el modelo diga que las agendó.
 - Las llamadas reales requieren configurar una clave válida del proveedor.
+- Dictado con la Web Speech API (`src/hooks/useDictation.ts`): el micrófono transcribe al campo de mensaje y no envía solo; si el navegador no lo admite, el botón queda desactivado.
+- Modelos por defecto revisados en octubre de 2026 (`gpt-6.1-sol`, `gpt-6-luna`, `gemini-3.8-flash`, `claude-haiku-5-5`). El selector admite **Otro modelo (ID personalizado)** para no depender del catálogo del código.
+- Los atajos locales de mover y borrar solo actúan cuando el título mencionado coincide con **un único** evento; si hay empate preguntan cuál. Ya no borran «el primer evento del día» cuando no encuentran el título (`src/lib/text.ts`).
 
 ### Conversaciones
 
@@ -116,9 +119,22 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 - `npm run build`: pasa.
 - `npm run lint`: pasa sin advertencias en la última verificación.
+- `npm test`: 18 pruebas de `src/lib/text.ts` y `src/lib/assistant.ts` (detección de menciones, horas, intención de borrar y extracción del JSON del modelo).
 - `get_errors` sobre `src/App.tsx`: sin errores.
 - Pruebas de navegador realizadas para: agenda en ventana flexible, duración personalizada, repetición diaria, eliminación individual, creación/edición de series IA con endpoint simulado, detalle temporal en vistas de calendario y duplicación/persistencia de conversaciones.
 - Las pruebas del proveedor IA fueron simuladas; no verifican una llamada externa ni requieren exponer una clave.
+- El dictado no se ha probado con micrófono real: depende de Chrome/Edge y del permiso del sistema.
+
+## Cambios recientes (25/10/2026)
+
+1. **Dictado real** en `src/hooks/useDictation.ts`; `PlannerApp` lo conecta y `AssistantPanel` muestra el estado real de la escucha (antes el botón solo cambiaba un texto y decía «Escuchando» sin escuchar nada).
+2. **Proxy de IA (`api/assistant.ts`)**: valida el `Origin` igual que la versión PHP y ya no usa la clave del servidor en producción salvo `AURA_ALLOW_SERVER_KEY=1`. Para OpenAI envía `max_completion_tokens` en lugar de `temperature`/`max_tokens`, que los modelos razonadores rechazan.
+3. **Catálogo de modelos actualizado** en `src/constants.ts` y en los valores por defecto de los dos proxies, con opción de ID personalizado en la interfaz.
+4. **Borrado y movimiento seguros** en `src/hooks/useAssistant.ts` con `src/lib/text.ts`: coincidencia por título sin acentos, tolerancia a plurales, sin falsos positivos por subcadenas y sin borrar un evento al azar.
+5. **`extractJsonObject`** en `src/lib/assistant.ts`: extrae el primer objeto JSON completo contando llaves, así una respuesta con texto o llaves anidadas ya no rompe el parseo.
+6. **Marca de migración por usuario** (`aura-cloud-migration-complete:<userId>`) en `src/App.tsx`; antes era global del navegador.
+7. **El modelo elegido se restaura** al abrir la app (antes siempre arrancaba con el primero de OpenRouter).
+8. **Vitest** añadido (`npm test`) con pruebas de la lógica pura.
 
 ## Pendientes / límites conocidos
 

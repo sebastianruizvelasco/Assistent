@@ -43,10 +43,39 @@ export const requestAssistant = async (request: AssistantRequest, fallbackError 
   return data
 }
 
-// Extrae el objeto JSON de acción que el modelo incluye en su respuesta (o null si no hay).
-export const parseAssistantResult = (reply: string): AssistantResult | null => {
-  const jsonStart = reply.indexOf('{')
-  const jsonEnd = reply.lastIndexOf('}')
-  if (jsonStart < 0 || jsonEnd <= jsonStart) return null
-  try { return JSON.parse(reply.slice(jsonStart, jsonEnd + 1)) as AssistantResult } catch { return null }
+// Extrae el primer objeto JSON completo de una respuesta, aunque el modelo lo envuelva en texto.
+// Se cuenta la profundidad de llaves para no cortar el JSON en el primer `}` de un valor anidado
+// (el `lastIndexOf('}')` anterior rompía cuando la respuesta incluía varias acciones o texto extra).
+export const extractJsonObject = (raw: string): string | null => {
+  const start = raw.indexOf('{')
+  if (start < 0) return null
+  let depth = 0
+  let inString = false
+  let escaped = false
+  for (let index = start; index < raw.length; index += 1) {
+    const char = raw[index]
+    if (inString) {
+      if (escaped) escaped = false
+      else if (char === '\\') escaped = true
+      else if (char === '"') inString = false
+      continue
+    }
+    if (char === '"') inString = true
+    else if (char === '{') depth += 1
+    else if (char === '}') {
+      depth -= 1
+      if (depth === 0) return raw.slice(start, index + 1)
+    }
+  }
+  return null
 }
+
+// Parsea un JSON que el modelo devuelve dentro de su texto; null si no hay nada válido.
+export const parseJsonPayload = <T,>(raw: string): T | null => {
+  const json = extractJsonObject(raw)
+  if (!json) return null
+  try { return JSON.parse(json) as T } catch { return null }
+}
+
+// Extrae el objeto JSON de acción que el modelo incluye en su respuesta (o null si no hay).
+export const parseAssistantResult = (reply: string): AssistantResult | null => parseJsonPayload<AssistantResult>(reply)

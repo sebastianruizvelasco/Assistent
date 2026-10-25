@@ -15,10 +15,10 @@ type ProviderName = 'openrouter' | 'openai' | 'gemini' | 'anthropic'
 type ChatMessage = { role: string; content: string }
 
 const PROVIDERS: Record<ProviderName, { envKey: string; envModel: string; defaultModel: string }> = {
-  openrouter: { envKey: 'OPENROUTER_API_KEY', envModel: 'OPENROUTER_MODEL', defaultModel: 'openai/gpt-4o-mini' },
-  openai: { envKey: 'OPENAI_API_KEY', envModel: 'OPENAI_MODEL', defaultModel: 'gpt-4o-mini' },
-  gemini: { envKey: 'GEMINI_API_KEY', envModel: 'GEMINI_MODEL', defaultModel: 'gemini-2.0-flash' },
-  anthropic: { envKey: 'ANTHROPIC_API_KEY', envModel: 'ANTHROPIC_MODEL', defaultModel: 'claude-3-5-haiku-20241022' },
+  openrouter: { envKey: 'OPENROUTER_API_KEY', envModel: 'OPENROUTER_MODEL', defaultModel: 'openai/gpt-6.1-sol' },
+  openai: { envKey: 'OPENAI_API_KEY', envModel: 'OPENAI_MODEL', defaultModel: 'gpt-6-luna' },
+  gemini: { envKey: 'GEMINI_API_KEY', envModel: 'GEMINI_MODEL', defaultModel: 'gemini-3.8-flash' },
+  anthropic: { envKey: 'ANTHROPIC_API_KEY', envModel: 'ANTHROPIC_MODEL', defaultModel: 'claude-haiku-5-5' },
 }
 
 const json = (status: number, payload: unknown) =>
@@ -28,6 +28,22 @@ const json = (status: number, payload: unknown) =>
   })
 
 const isProvider = (value: string): value is ProviderName => value in PROVIDERS
+
+const hostOf = (value: string): string | null => {
+  try { return new URL(value).host.toLowerCase() } catch { return null }
+}
+
+// Misma regla que public/api/assistant.php: si el navegador envía Origin, debe ser el de este sitio.
+// Sin esta comprobación, desplegar este archivo como función serverless lo convertía en un proxy
+// abierto que cualquiera podía usar (y pagar) desde otro dominio o desde un script.
+const isOwnOrigin = (request: Request, env: NodeJS.ProcessEnv) => {
+  const origin = request.headers.get('origin')
+  if (!origin) return true
+  const originHost = hostOf(origin)
+  const requestHost = hostOf(`http://${request.headers.get('host') || ''}`)
+  const siteHost = env.SITE_URL ? hostOf(env.SITE_URL) : null
+  return Boolean(originHost && (originHost === requestHost || (siteHost && originHost === siteHost)))
+}
 
 // Quita mensajes mal formados y recorta tamaños para que el endpoint no se pueda abusar con cargas enormes.
 const sanitizeMessages = (input: unknown): ChatMessage[] => {
@@ -56,6 +72,8 @@ const upstreamError = (data: Record<string, any>) => {
 export async function POST(request: Request): Promise<Response> {
   const env = process.env
 
+  if (!isOwnOrigin(request, env)) return json(403, { error: 'Origen no permitido.' })
+
   let body: { provider?: unknown; apiKey?: unknown; model?: unknown; messages?: unknown }
   try {
     const text = await request.text()
@@ -69,8 +87,12 @@ export async function POST(request: Request): Promise<Response> {
   const provider: ProviderName = isProvider(requested) ? requested : 'openrouter'
   const config = PROVIDERS[provider]
 
-  // La clave que escribe el usuario en el panel tiene prioridad; la del servidor solo es un respaldo opcional.
-  const apiKey = (typeof body.apiKey === 'string' ? body.apiKey.trim() : '') || env[config.envKey] || ''
+  // La clave que escribe el usuario en el panel tiene prioridad. La del servidor solo actúa como
+  // respaldo en desarrollo o si se habilita con AURA_ALLOW_SERVER_KEY=1: en producción no conviene
+  // que el endpoint gaste la clave del dueño para cualquiera que lo llame.
+  const serverKeyAllowed = env.NODE_ENV !== 'production' || env.AURA_ALLOW_SERVER_KEY === '1'
+  const apiKey = (typeof body.apiKey === 'string' ? body.apiKey.trim() : '')
+    || (serverKeyAllowed ? env[config.envKey] || '' : '')
   if (!apiKey) {
     return json(503, { error: `Falta configurar la clave API de ${provider.toUpperCase()} en el panel del asistente.` })
   }
@@ -87,6 +109,11 @@ export async function POST(request: Request): Promise<Response> {
   try {
     let upstream: Response
     if (provider === 'openrouter' || provider === 'openai') {
+      const chatMessages = [{ role: 'system', content: SYSTEM_PROMPT }, ...messages]
+      // Los modelos razonadores de OpenAI rechazan `temperature` y `max_tokens`; usan `max_completion_tokens`.
+      const payload = provider === 'openai'
+        ? { model, max_completion_tokens: 800, messages: chatMessages }
+        : { model, temperature: 0.3, max_tokens: 800, messages: chatMessages }
       upstream = await fetch(provider === 'openrouter' ? 'https://openrouter.ai/api/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         signal,
@@ -95,7 +122,7 @@ export async function POST(request: Request): Promise<Response> {
           Authorization: `Bearer ${apiKey}`,
           ...(provider === 'openrouter' ? { 'HTTP-Referer': origin, 'X-Title': 'AURA Assistant' } : {}),
         },
-        body: JSON.stringify({ model, temperature: 0.3, max_tokens: 800, messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...messages] }),
+        body: JSON.stringify(payload),
       })
     } else if (provider === 'anthropic') {
       upstream = await fetch('https://api.anthropic.com/v1/messages', {

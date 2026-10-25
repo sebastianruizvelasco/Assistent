@@ -1,7 +1,8 @@
 import { useState, type Dispatch, type SetStateAction } from 'react'
-import { buildAssistantContext, buildSeriesCatalog, parseAssistantResult, requestAssistant } from '../lib/assistant'
+import { buildAssistantContext, buildSeriesCatalog, parseAssistantResult, parseJsonPayload, requestAssistant } from '../lib/assistant'
 import { dateFromKey, dateKeyFromDate, defaultDateForTime, formatEventDate, hasExplicitDate, isValidDateKey, nextAvailableTime, parseLocalDateTime } from '../lib/dates'
 import { buildWeeklySeries, findAvailableSlot, isValidWeeklySchedule, validateSchedule } from '../lib/schedule'
+import { findEventsByMention, isDeleteIntent, parseMentionedTime } from '../lib/text'
 import type { AiSettings, CalendarView, ConversationMessage, EventItem, Memory, ProviderKey, ScheduleChange, ScheduleProposal } from '../types'
 
 type AssistantParams = {
@@ -29,27 +30,42 @@ export function useAssistant({ events, setEvents, memories, selectedDateKey, set
   const applyCommand = async (rawMessage: string) => {
     const text = rawMessage.trim()
     if (!text) return
-    const normalized = text.toLowerCase()
-    const requestedTime = text.match(/(?:a las|las)\s+(\d{1,2})(?::(\d{2}))?/) 
-    const eventToMove = events.find((event) => normalized.includes(event.title.toLowerCase()))
-    if (eventToMove && !eventToMove.seriesId && requestedTime) {
-      const newTime = `${String(Number(requestedTime[1])).padStart(2, '0')}:${requestedTime[2] || '00'}`
-      setEvents((current) => current.map((event) => event.id === eventToMove.id ? { ...event, time: newTime, date: selectedDateKey } : event))
-      setConversation((current) => [...current, { from: 'user', text }, { from: 'assistant', text: `He movido “${eventToMove.title}” a las ${newTime}.` }])
+    const mention = findEventsByMention(events, text)
+    const requestedTime = parseMentionedTime(text)
+
+    // “Mueve la reunión a las 16:00”: solo se actúa si la mención es única y el evento no es una serie.
+    if (requestedTime && mention.best && !mention.best.seriesId) {
+      const target = mention.best
+      if (target.time === requestedTime) {
+        setConversation((current) => [...current, { from: 'user', text }, { from: 'assistant', text: `“${target.title}” ya está a las ${requestedTime}.` }])
+        setMessage('')
+        return
+      }
+      setEvents((current) => current.map((event) => event.id === target.id ? { ...event, time: requestedTime, date: selectedDateKey } : event))
+      setConversation((current) => [...current, { from: 'user', text }, { from: 'assistant', text: `He movido “${target.title}” a las ${requestedTime}.` }])
       setMessage('')
       return
     }
-    if (normalized.includes('elimina') || normalized.includes('borra')) {
-      const eventToRemove = eventToMove || events.find((event) => event.date === selectedDateKey)
-      if (eventToRemove) {
+
+    // “Borra la reunión de equipo”: se pide confirmación sobre un evento concreto, nunca sobre uno elegido al azar.
+    if (isDeleteIntent(text)) {
+      if (mention.best) {
+        const target = mention.best
         setConversation((current) => [...current, { from: 'user', text }])
-        confirmAction(`Confirma la eliminación de “${eventToRemove.title}”.`, () => {
-          setEvents((current) => current.filter((event) => event.id !== eventToRemove.id))
-          showNotice(`${eventToRemove.title} se ha eliminado de tu día.`)
+        confirmAction(`Confirma la eliminación de “${target.title}” del ${formatEventDate(target.date)} a las ${target.time}.`, () => {
+          setEvents((current) => current.filter((event) => event.id !== target.id))
+          showNotice(`${target.title} se ha eliminado de tu día.`)
         })
         setMessage('')
         return
       }
+      if (mention.ambiguous) {
+        const titles = mention.matches.slice(0, 5).map((event) => `“${event.title}”`).join(', ')
+        setConversation((current) => [...current, { from: 'user', text }, { from: 'assistant', text: `Hay varios eventos que encajan: ${titles}. ¿Cuál quieres borrar? Dime el título exacto o bórralo desde el calendario.` }])
+        setMessage('')
+        return
+      }
+      // Sin coincidencia clara lo resuelve el modelo, que puede referirse a una hora o a otra fecha.
     }
     setConversation((current) => [...current, { from: 'user', text }])
     setMessage('')
@@ -155,10 +171,8 @@ export function useAssistant({ events, setEvents, memories, selectedDateKey, set
       }
       const data = await requestAssistant({ provider: selectedProvider, apiKey: aiSettings[selectedProvider].apiKey, model: selectedModel, messages: [{ role: 'user', content: `Organiza el horario del día usando estos datos: ${JSON.stringify(context)}. Reordena solo los eventos no completados; conserva cada duración, deja intactos los completados y no crees ni elimines eventos. Prioriza los de prioridad alta y considera las preferencias. REGLA OBLIGATORIA: los eventos con flexibilityStart/end deben quedar enteros dentro de esa ventana; los que tienen flexibilityMinutes pueden moverse como máximo esa cantidad de minutos respecto a su hora; los demás son fijos. Solo puedes reorganizar dentro del día seleccionado. Devuelve exclusivamente JSON válido con esta forma: {"schedule":[{"id":1,"time":"09:00"}],"summary":"explicación breve en español"}. Incluye exactamente una entrada por cada evento pendiente y evita solapamientos.` }] }, 'No pude obtener una propuesta del modelo.')
       if (!data.reply) throw new Error(data.error || 'No pude obtener una propuesta del modelo.')
-      const start = data.reply.indexOf('{')
-      const end = data.reply.lastIndexOf('}')
-      if (start < 0 || end <= start) throw new Error('La IA no devolvió una propuesta legible. Inténtalo de nuevo.')
-      const result = JSON.parse(data.reply.slice(start, end + 1)) as { schedule?: ScheduleChange[]; summary?: string }
+      const result = parseJsonPayload<{ schedule?: ScheduleChange[]; summary?: string }>(data.reply)
+      if (!result) throw new Error('La IA no devolvió una propuesta legible. Inténtalo de nuevo.')
       if (!Array.isArray(result.schedule)) throw new Error('La propuesta no contiene un horario válido.')
       const validationError = validateSchedule(dayEvents, result.schedule)
       if (validationError) throw new Error(validationError)

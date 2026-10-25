@@ -8,6 +8,7 @@ import { SectionHub } from './SectionHub'
 import { Topbar } from './Topbar'
 import { availableModels, providerModels } from '../constants'
 import { useAssistant } from '../hooks/useAssistant'
+import { useDictation } from '../hooks/useDictation'
 import { useGoogleCalendar } from '../hooks/useGoogleCalendar'
 import { profileFromUser } from '../lib/profile'
 import type { UserProfile } from '../lib/profile'
@@ -45,7 +46,6 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const [dragSelection, setDragSelection] = useState<{ start: number; end: number } | null>(null)
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
   const [formEventId, setFormEventId] = useState<number | null>(null)
-  const [voiceActive, setVoiceActive] = useState(false)
   const [darkMode, setDarkMode] = useState(() => snapshot?.darkMode ?? (() => { const savedTheme = localStorage.getItem('aura-theme'); return savedTheme ? savedTheme === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches })())
   const [conversationSessions, setConversationSessions] = useState<ConversationSession[]>(() => snapshot?.conversationSessions || (() => {
     const savedSessions = readStored<ConversationSession[]>('aura-conversations', [])
@@ -65,9 +65,9 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     }))
   }
   const [scheduleProposal, setScheduleProposal] = useState<{ date: string; changes: ScheduleChange[]; summary: string } | null>(null)
-  const [selectedProvider, setSelectedProvider] = useState<keyof typeof providerModels>('openrouter')
-  const [selectedModel, setSelectedModel] = useState<string>(availableModels[0].id)
   const [aiSettings, setAiSettings] = useState<AiSettings>(() => mergeAiSettings(snapshot?.aiSettings, aiSettingsStorageKey))
+  const [selectedProvider, setSelectedProvider] = useState<keyof typeof providerModels>('openrouter')
+  const [selectedModel, setSelectedModel] = useState<string>(() => aiSettings.openrouter?.model || availableModels[0].id)
   const [aiSettingsOpen, setAiSettingsOpen] = useState(false)
   const [draggedId, setDraggedId] = useState<number | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<'todas' | 'alta' | 'media' | 'baja'>('todas')
@@ -109,10 +109,13 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   const google = useGoogleCalendar({ events, setEvents, showNotice, confirmAction, timeZone })
 
-  const toggleVoice = () => {
-    setVoiceActive((current) => !current)
-    showNotice(voiceActive ? 'Dictado pausado.' : 'Modo dictado activado. Escribe tu instrucción para continuar.')
-  }
+  // Dictado real con el micrófono del sistema: el texto reconocido se añade al mensaje, no se envía solo.
+  const dictation = useDictation({
+    onTranscript: (text) => setMessage((current) => (current.trim() ? `${current.trim()} ${text}` : text)),
+    onError: showNotice,
+  })
+
+  const toggleVoice = () => dictation.toggle()
 
   const toggleTheme = () => {
     setDarkMode((current) => {
@@ -414,7 +417,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
         </section>
         <ProductivityPanel activeSection={activeSection} completedCount={completedCount} selectedDayEvents={selectedDayEvents} totalMinutes={totalMinutes} conflictIds={conflictIds} priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter} setShowCompleted={setShowCompleted} showCompleted={showCompleted} isThinking={isThinking} organizeSelectedDay={organizeSelectedDay} events={events} openEditEvent={openEditEvent} removeEvent={removeEvent} />
 
-        <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} showNotice={showNotice} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={voiceActive} toggleVoice={toggleVoice} />
+        <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} showNotice={showNotice} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={dictation.listening} voiceSupported={dictation.supported} voiceInterim={dictation.interim} toggleVoice={toggleVoice} />
       </div>
       {notice && <div className="notice" role="status">{notice}</div>}
       {pendingAction && <div className="confirm-bar" role="alert"><span>{pendingMessage || '¿Quieres continuar?'}</span><button onClick={() => { pendingAction(); setPendingAction(null); setPendingMessage('') }}>Confirmar</button><button onClick={() => { setPendingAction(null); setPendingMessage('') }}>Cancelar</button></div>}

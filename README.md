@@ -14,6 +14,7 @@ Comprobaciones:
 ```bash
 npm run build
 npm run lint
+npm test
 ```
 
 ## Activar cuentas y sincronización
@@ -75,6 +76,9 @@ La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLO
 - `src/hooks/` y `src/lib/`: lógica del asistente, sincronización con la nube y con Google Calendar, recordatorios, fechas y horarios.
 - `src/supabase.ts`: cliente opcional de Supabase.
 - `src/App.css`: estilos de la aplicación y acceso.
+- Dictado con la Web Speech API del navegador (sin servidor ni clave): el texto reconocido se añade al mensaje y no se envía solo. Si el navegador no lo admite, el micrófono queda desactivado.
+- El selector de modelo incluye **Otro modelo (ID personalizado)**: los catálogos de modelos cambian a menudo y así no hace falta esperar a una actualización del código.
+- `tests/`: pruebas de la lógica pura con Vitest (`npm test`).
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)

@@ -50,7 +50,10 @@ function App() {
         const { data, error } = await client.from('aura_user_data').select('data').eq('user_id', userId).maybeSingle()
         if (error) throw error
         const apiKeyStorageKey = `aura-ai-settings:${userId}`
-        const legacyMigration = !data && !localStorage.getItem('aura-cloud-migration-complete')
+        // La marca de migración es por cuenta: antes era global del navegador y la segunda
+        // cuenta que entraba en el mismo equipo no migraba sus datos locales.
+        const migrationKey = `aura-cloud-migration-complete:${userId}`
+        const legacyMigration = !data && !localStorage.getItem(migrationKey)
         let loaded = data?.data && typeof data.data === 'object'
           ? data.data as AppSnapshot
           : legacyMigration ? readLocalAppSnapshot() : createEmptyAppSnapshot()
@@ -64,7 +67,7 @@ function App() {
           if (migrationError) throw migrationError
         }
         if (!active) return
-        localStorage.setItem('aura-cloud-migration-complete', 'true')
+        localStorage.setItem(migrationKey, 'true')
         loaded = { ...loaded, aiSettings: mergeAiSettings(loaded.aiSettings, apiKeyStorageKey) }
         setSnapshot(loaded)
       } catch (error) {

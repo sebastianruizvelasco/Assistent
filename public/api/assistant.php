@@ -54,10 +54,10 @@ if (!is_array($body)) {
 }
 
 $defaults = [
-    'openrouter' => 'openai/gpt-4o-mini',
-    'openai' => 'gpt-4o-mini',
-    'gemini' => 'gemini-2.0-flash',
-    'anthropic' => 'claude-3-5-haiku-20241022',
+    'openrouter' => 'openai/gpt-6.1-sol',
+    'openai' => 'gpt-6-luna',
+    'gemini' => 'gemini-3.8-flash',
+    'anthropic' => 'claude-haiku-5-5',
 ];
 $provider = strtolower(is_string($body['provider'] ?? null) ? $body['provider'] : 'openrouter');
 if (!isset($defaults[$provider])) {
@@ -99,10 +99,15 @@ if ($provider === 'openrouter' || $provider === 'openai') {
     }
     $payload = [
         'model' => $model,
-        'temperature' => 0.3,
-        'max_tokens' => 800,
         'messages' => array_merge([['role' => 'system', 'content' => AURA_SYSTEM_PROMPT]], $messages),
     ];
+    if ($provider === 'openai') {
+        // Los modelos razonadores de OpenAI rechazan temperature y max_tokens.
+        $payload['max_completion_tokens'] = 800;
+    } else {
+        $payload['temperature'] = 0.3;
+        $payload['max_tokens'] = 800;
+    }
 } elseif ($provider === 'anthropic') {
     $url = 'https://api.anthropic.com/v1/messages';
     $headers[] = 'x-api-key: ' . $apiKey;

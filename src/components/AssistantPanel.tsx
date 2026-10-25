@@ -1,5 +1,5 @@
 import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react'
-import { providerLabels, providerModels, providerOrder, suggestions } from '../constants'
+import { customModelValue, providerLabels, providerModels, providerOrder, suggestions } from '../constants'
 import type { AiSettings, ConversationMessage, ConversationSession, EventItem, ScheduleChange } from '../types'
 import { LogoMark } from './Logo'
 import { CopyIcon, MicIcon, PlusIcon, SendIcon, SettingsIcon, SparkIcon } from './Icons'
@@ -32,6 +32,8 @@ type AssistantPanelProps = {
   message: string
   setMessage: Dispatch<SetStateAction<string>>
   voiceActive: boolean
+  voiceSupported: boolean
+  voiceInterim: string
   toggleVoice: () => void
 }
 
@@ -41,9 +43,17 @@ export function AssistantPanel({
   scheduleProposal, events, setScheduleProposal, selectedDateKey, applyScheduleProposal,
   conversation, isThinking, applyCommand, activeConversationId, setActiveConversationId,
   conversationSessions, duplicateCurrentConversation, startNewConversation, message, setMessage,
-  voiceActive, toggleVoice
+  voiceActive, voiceSupported, voiceInterim, toggleVoice
 }: AssistantPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  const knownModels = providerModels[selectedProvider]
+  // Un modelo guardado que ya no esté en la lista se muestra como ID personalizado, no se pierde.
+  const isCustomModel = !knownModels.some((model) => model.id === selectedModel)
+  const updateModel = (value: string) => {
+    setSelectedModel(value)
+    setAiSettings((current) => ({ ...current, [selectedProvider]: { ...current[selectedProvider], model: value } }))
+  }
 
   // Mantiene visible el último mensaje cuando llega uno nuevo o el modelo está escribiendo.
   useEffect(() => {
@@ -71,9 +81,21 @@ export function AssistantPanel({
         <select className="provider-select" aria-label="Proveedor de IA" value={selectedProvider} onChange={(event) => handleProviderChange(event.target.value as keyof typeof providerModels)}>
           {providerOrder.map((provider) => <option key={provider} value={provider}>{providerLabels[provider]}</option>)}
         </select>
-        <select className="model-select" aria-label="Modelo de IA" value={selectedModel} onChange={(event) => { setSelectedModel(event.target.value); setAiSettings((current) => ({ ...current, [selectedProvider]: { ...current[selectedProvider], model: event.target.value } })) }}>
-          {providerModels[selectedProvider].map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
+        <select className="model-select" aria-label="Modelo de IA" value={isCustomModel ? customModelValue : selectedModel} onChange={(event) => updateModel(event.target.value === customModelValue ? '' : event.target.value)}>
+          {knownModels.map((model) => <option key={model.id} value={model.id}>{model.name}</option>)}
+          <option value={customModelValue}>Otro modelo (ID personalizado)</option>
         </select>
+        {isCustomModel && (
+          <input
+            className="model-custom"
+            aria-label="ID de modelo personalizado"
+            value={selectedModel}
+            onChange={(event) => updateModel(event.target.value)}
+            placeholder="ID del modelo, p. ej. gpt-6-luna (vacío = el que use el proxy)"
+            spellCheck={false}
+            autoComplete="off"
+          />
+        )}
       </div>
 
       {aiSettingsOpen && (
@@ -134,10 +156,22 @@ export function AssistantPanel({
         </div>
         <form className="composer" onSubmit={(event) => { event.preventDefault(); applyCommand(message) }}>
           <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Dile a Aura qué necesitas..." />
-          <button type="button" className={`mic-button ${voiceActive ? 'voice-active' : ''}`} aria-label="Activar dictado" aria-pressed={voiceActive} onClick={toggleVoice}><MicIcon /></button>
+          <button
+            type="button"
+            className={`mic-button ${voiceActive ? 'voice-active' : ''}`}
+            aria-label={voiceActive ? 'Detener dictado' : 'Activar dictado'}
+            aria-pressed={voiceActive}
+            title={voiceSupported ? (voiceActive ? 'Detener dictado' : 'Dictar con el micrófono') : 'Tu navegador no admite dictado por voz'}
+            disabled={!voiceSupported}
+            onClick={toggleVoice}
+          ><MicIcon /></button>
           <button type="submit" className="send-button" aria-label="Enviar mensaje"><SendIcon /></button>
         </form>
-        <p className={`voice-note ${voiceActive ? 'voice-active' : ''}`}>{voiceActive ? 'Escuchando tu instrucción...' : 'También puedes hablar con Aura'}</p>
+        <p className={`voice-note ${voiceActive ? 'voice-active' : ''}`} aria-live="polite">
+          {voiceActive
+            ? (voiceInterim ? `Escuchando: “${voiceInterim}”` : 'Escuchando tu instrucción…')
+            : voiceSupported ? 'También puedes hablar con Aura' : 'Tu navegador no admite dictado; escribe la instrucción'}
+        </p>
       </div>
     </aside>
   )

@@ -280,13 +280,17 @@ select {
 .online-dot { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); font-size: 11px; font-weight: 600; }
 .online-dot::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
 
-.assistant-model-bar { display: flex; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-soft); }
+.assistant-model-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--border-soft); }
 .provider-select, .model-select {
   min-width: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); outline: 0; background-color: var(--surface-2); color: var(--text); font-size: 12px; font-weight: 500;
 }
 .provider-select { flex: 0 0 auto; max-width: 46%; }
 .model-select { flex: 1; }
 .provider-select:hover, .model-select:hover { border-color: var(--primary); }
+/* ID de modelo escrito a mano: aparece solo cuando el modelo no está en la lista. */
+.model-custom { flex: 1 1 100%; min-width: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); outline: 0; background: var(--surface); color: var(--text); font-size: 12px; }
+.model-custom:focus { border-color: var(--primary); }
+.model-custom::placeholder { color: var(--faint); }
 
 .ai-settings-panel { display: flex; flex-direction: column; gap: 10px; margin: 12px 16px 0; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2); }
 .ai-settings-title { margin: 0; color: var(--text); font-size: 13px; font-weight: 700; }
@@ -347,7 +351,8 @@ select {
 .composer input::placeholder { color: var(--faint); }
 .mic-button, .send-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; }
 .mic-button { background: transparent; color: var(--muted); }
-.mic-button:hover { background: var(--surface-3); color: var(--text); }
+.mic-button:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
+.mic-button:disabled { opacity: .4; cursor: not-allowed; }
 .mic-button.voice-active { background: var(--danger); color: #fff; animation: micPulse 1.4s infinite; }
 .send-button { background: var(--brand-gradient); color: #fff; box-shadow: 0 3px 10px rgba(91, 91, 214, .4); transition: transform .15s; }
 .send-button:hover { transform: scale(1.06); }
