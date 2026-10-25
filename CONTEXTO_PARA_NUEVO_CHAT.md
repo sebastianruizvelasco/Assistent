@@ -73,7 +73,7 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 
 ### Inicio de sesión y sincronización
 
-- Supabase Auth permite crear cuenta e iniciar/cerrar sesión con correo/contraseña o Google cuando se configuran `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` y se habilita OAuth Google en el dashboard.
+- Supabase Auth permite crear cuenta e iniciar/cerrar sesión con correo/contraseña, Google o Discord cuando se configuran `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` y se habilita el proveedor en el dashboard.
 - `src/supabase.ts` crea el cliente solo si ambas variables están presentes.
 - `supabase/schema.sql` crea `public.aura_user_data`, con una fila JSONB por usuario y políticas RLS para `select`, `insert` y `update`.
 - AURA sincroniza eventos, proyectos, memorias, conversaciones, preferencias de calendario y modelos IA seleccionados con debounce.
@@ -96,6 +96,14 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 - Proyectos y memorias personales en localStorage y snapshot cloud cuando Supabase está activo.
 - Tema claro/oscuro, reloj y zona horaria local, clima y ubicación si el navegador los permite.
 - Notificaciones del navegador sujetas a permiso.
+- Dictado con la Web Speech API: pide el micrófono con `getUserMedia` antes de escuchar (para que el navegador muestre el aviso), vigila que la escucha arranque de verdad y registra `[AURA dictado]` en la consola.
+
+### Discord
+
+- **Acceso**: botón «Continuar con Discord» en la pantalla de acceso mediante `supabase.auth.signInWithOAuth({ provider: 'discord' })`. Requiere habilitar el proveedor Discord en Supabase y su redirect `https://<project-ref>.supabase.co/auth/v1/callback`.
+- **Bot**: `bot/` es un proyecto Node independiente (discord.js + `@supabase/supabase-js` con clave de servicio). Comandos `/agenda`, `/semana`, `/nuevo`, `/borrar`; lee y escribe `events` dentro del JSONB de `public.aura_user_data` conservando el resto del documento.
+- El bot atiende a una sola cuenta (`AURA_USER_ID`); no hay flujo de vinculación multiusuario.
+- El bot corre fuera de InfinityFree (necesita un proceso Node 20+). No debe usarse con la app abierta: el guardado con debounce de la app puede sobrescribir sus cambios.
 
 ## Arquitectura relevante
 

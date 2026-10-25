@@ -28,6 +28,17 @@ npm test
 
 La clave `anon`/publishable de Supabase está diseñada para el cliente y queda protegida por RLS. **Nunca** pongas una clave `service_role` en una variable `VITE_*` ni en el frontend.
 
+## Entrar con Discord
+
+1. En el [Discord Developer Portal](https://discord.com/developers/applications) crea una aplicación y copia **Client ID** y **Client Secret** de *OAuth2*.
+2. En esa aplicación, añade como **Redirect** `https://<project-ref>.supabase.co/auth/v1/callback` (el mismo que usas con Google).
+3. En Supabase ve a **Authentication > Providers > Discord**, actívalo y pega el Client ID y el Secret.
+4. Reinicia Vite si hace falta: en la pantalla de acceso aparecerá **Continuar con Discord**.
+
+## Bot de Discord
+
+`bot/` contiene un bot con comandos —`/agenda`, `/semana`, `/nuevo`, `/borrar`— que lee y escribe tu agenda en Supabase, sin pasar por la interfaz. Necesita un proceso Node encendido (no cabe en InfinityFree). Instrucciones en [`bot/README.md`](bot/README.md).
+
 ## Sincronizar con Google Calendar
 
 AURA se sincroniza en dos vías con tu calendario principal de Google: lo que creas o cambias en AURA aparece en Google Calendar y viceversa. No necesita servidor propio: usa el inicio de sesión de Google en el navegador y no hay ningún secreto que proteger.
@@ -79,6 +90,7 @@ La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLO
 - Dictado con la Web Speech API del navegador (sin servidor ni clave): el texto reconocido se añade al mensaje y no se envía solo. Si el navegador no lo admite, el micrófono queda desactivado.
 - El selector de modelo incluye **Otro modelo (ID personalizado)**: los catálogos de modelos cambian a menudo y así no hace falta esperar a una actualización del código.
 - `tests/`: pruebas de la lógica pura con Vitest (`npm test`).
+- `bot/`: bot de Discord (Node + discord.js) con su propio `package.json` y `README.md`.
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)

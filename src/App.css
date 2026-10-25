@@ -550,6 +550,8 @@ select {
 .google-signin:hover { border-color: var(--primary); background: var(--surface-2); }
 .google-signin span { color: #4285f4; font-size: 17px; font-weight: 700; }
 .google-signin:disabled { cursor: wait; opacity: .65; }
+/* Discord usa el mismo botón; solo cambia el color de la marca. */
+.discord-signin svg { color: #5865f2; flex: none; }
 .loading-panel { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; }
 .loading-panel h1 { font-size: 22px; }
 .logo-pulse { animation: logoPulse 1.8s ease-in-out infinite; }

@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabase'
 import { AuthScreen } from './components/AuthScreen'
-import type { AuthMode } from './components/AuthScreen'
+import type { AuthMode, OAuthProvider } from './components/AuthScreen'
 import { LoadingScreen } from './components/LoadingScreen'
 import { PlannerApp } from './components/PlannerApp'
 import { profileFromUser } from './lib/profile'
@@ -101,15 +101,15 @@ function App() {
     }
   }
 
-  const signInWithGoogle = async () => {
-    if (!supabase) { setAuthMessage('Para activar Google, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env y reinicia la app.'); return }
+  const signInWithProvider = async (provider: OAuthProvider) => {
+    if (!supabase) { setAuthMessage('Para activar Google o Discord, configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env y reinicia la app.'); return }
     setAuthBusy(true)
     setAuthMessage('')
     try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
+      const { error } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin } })
       if (error) throw error
     } catch (error) {
-      setAuthMessage(error instanceof Error ? error.message : 'No se pudo iniciar sesión con Google.')
+      setAuthMessage(error instanceof Error ? error.message : `No se pudo iniciar sesión con ${provider === 'discord' ? 'Discord' : 'Google'}.`)
       setAuthBusy(false)
     }
   }
@@ -133,7 +133,7 @@ function App() {
   if (session && snapshot) return <PlannerApp key={session.user.id} snapshot={snapshot} user={profileFromUser(session.user)} localApiKeyStorageKey={`aura-ai-settings:${session.user.id}`} onSignOut={() => { void signOut() }} onSaveSnapshot={saveSnapshot} />
   if (session && authMessage) return <div className="auth-screen"><div className="auth-panel"><p className="eyebrow">AURA · SINCRONIZACIÓN</p><h1>No se pudo cargar la cuenta</h1><p className="auth-description">{authMessage}</p><button type="button" className="auth-submit" onClick={() => setLocalMode(true)}>Continuar en este dispositivo</button><button type="button" className="auth-mode-button" onClick={() => { void signOut() }}>Cerrar sesión</button></div></div>
 
-  return <AuthScreen authMode={authMode} setAuthMode={setAuthMode} email={email} setEmail={setEmail} password={password} setPassword={setPassword} authBusy={authBusy} authMessage={authMessage} setAuthMessage={setAuthMessage} signInWithGoogle={signInWithGoogle} submitAuth={submitAuth} setLocalMode={setLocalMode} />
+  return <AuthScreen authMode={authMode} setAuthMode={setAuthMode} email={email} setEmail={setEmail} password={password} setPassword={setPassword} authBusy={authBusy} authMessage={authMessage} setAuthMessage={setAuthMessage} signInWithProvider={signInWithProvider} submitAuth={submitAuth} setLocalMode={setLocalMode} />
 }
 
 export default App

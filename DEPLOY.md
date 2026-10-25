@@ -31,20 +31,24 @@ AURA se publica como **archivos estáticos** (carpeta `dist/`) más un **proxy P
 
 Cada vez que cambies el código: `npm run build` y vuelve a subir `dist/`.
 
-## 3. Actualizar Supabase y Google (obligatorio para iniciar sesión)
+## 3. Actualizar Supabase, Google y Discord (obligatorio para iniciar sesión)
 
 - **Supabase > Authentication > URL Configuration**
   - Site URL: `https://auraassistent.freehosting.dev`
   - Redirect URLs: añade `https://auraassistent.freehosting.dev/**` (conserva las de localhost).
 - **Google Cloud > Credenciales > tu ID de cliente OAuth Web**
   - Orígenes autorizados de JavaScript: añade `https://auraassistent.freehosting.dev`.
+- **Discord (solo si usas «Continuar con Discord»)**
+  - En el Discord Developer Portal, *OAuth2 > Redirects*: `https://<project-ref>.supabase.co/auth/v1/callback`.
+  - En Supabase, *Authentication > Providers > Discord*: activado con su Client ID y Secret.
 
 ## 4. Lista de comprobación
 
 - [ ] La web abre por **HTTPS** y al recargar una ruta interna no da 404.
-- [ ] Registro/inicio de sesión (correo y Google) funciona.
+- [ ] Registro/inicio de sesión (correo, Google y Discord) funciona.
 - [ ] El chat responde con una clave real. Si falla con `Unexpected token <`, la respuesta fue la página de verificación de InfinityFree en vez de JSON (ver abajo).
 - [ ] **Conectar Google Calendar** abre el consentimiento sin errores de origen.
+- [ ] El **dictado** pide permiso del micrófono (la cabecera `Permissions-Policy` debe incluir `microphone=(self)`).
 
 ## Limitaciones del hosting gratuito
 
