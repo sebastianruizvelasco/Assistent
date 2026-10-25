@@ -6,6 +6,7 @@ import type { AuthMode, OAuthProvider } from './components/AuthScreen'
 import { LoadingScreen } from './components/LoadingScreen'
 import { PlannerApp } from './components/PlannerApp'
 import { profileFromUser } from './lib/profile'
+import { createLinkCode, LINK_CODE_TTL_MS } from './lib/discord'
 import { createEmptyAppSnapshot, mergeAiSettings, readLocalAppSnapshot, snapshotForCloud } from './lib/snapshot'
 import type { AppSnapshot } from './types'
 import './App.css'
@@ -127,10 +128,21 @@ function App() {
     if (error) throw error
   }
 
+  // Crea un código de un solo uso que la persona escribe en Discord con /vincular.
+  const linkDiscord = async () => {
+    if (!supabase || !session?.user.id) throw new Error('Inicia sesión para vincular tu cuenta de Discord.')
+    const code = createLinkCode()
+    const expiresAt = new Date(Date.now() + LINK_CODE_TTL_MS).toISOString()
+    await supabase.from('discord_link_codes').delete().eq('user_id', session.user.id)
+    const { error } = await supabase.from('discord_link_codes').insert({ code, user_id: session.user.id, expires_at: expiresAt })
+    if (error) throw new Error(`No pude crear el código: ${error.message}. ¿Ejecutaste supabase/discord.sql?`)
+    return { code, expiresAt }
+  }
+
   if (localMode) return <PlannerApp onSignOut={() => setLocalMode(false)} />
   if (!sessionReady) return <LoadingScreen title="Comprobando sesión…" />
   if (session && !snapshot && !authMessage) return <LoadingScreen title="Cargando tu agenda…" />
-  if (session && snapshot) return <PlannerApp key={session.user.id} snapshot={snapshot} user={profileFromUser(session.user)} localApiKeyStorageKey={`aura-ai-settings:${session.user.id}`} onSignOut={() => { void signOut() }} onSaveSnapshot={saveSnapshot} />
+  if (session && snapshot) return <PlannerApp key={session.user.id} snapshot={snapshot} user={profileFromUser(session.user)} localApiKeyStorageKey={`aura-ai-settings:${session.user.id}`} onSignOut={() => { void signOut() }} onSaveSnapshot={saveSnapshot} onLinkDiscord={linkDiscord} />
   if (session && authMessage) return <div className="auth-screen"><div className="auth-panel"><p className="eyebrow">AURA · SINCRONIZACIÓN</p><h1>No se pudo cargar la cuenta</h1><p className="auth-description">{authMessage}</p><button type="button" className="auth-submit" onClick={() => setLocalMode(true)}>Continuar en este dispositivo</button><button type="button" className="auth-mode-button" onClick={() => { void signOut() }}>Cerrar sesión</button></div></div>
 
   return <AuthScreen authMode={authMode} setAuthMode={setAuthMode} email={email} setEmail={setEmail} password={password} setPassword={setPassword} authBusy={authBusy} authMessage={authMessage} setAuthMessage={setAuthMessage} signInWithProvider={signInWithProvider} submitAuth={submitAuth} setLocalMode={setLocalMode} />

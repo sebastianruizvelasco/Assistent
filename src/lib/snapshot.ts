@@ -4,10 +4,12 @@ import { todayDateKey } from './dates'
 import type { AiSettings, AppSnapshot, ConversationSession } from '../types'
 
 export const readStored = <T,>(key: string, fallback: T) => { try { const stored = localStorage.getItem(key); return stored ? JSON.parse(stored) as T : fallback } catch { return fallback } }
+// La clave del navegador manda; la de la nube sirve para estrenar dispositivo (y para que el
+// bot de Discord pueda usar la clave de cada persona, ver bot/src/index.js).
 export const mergeAiSettings = (cloudSettings?: Partial<AiSettings>, localStorageKey = 'aura-ai-settings') => {
   const localSettings = readStored(localStorageKey, defaultAiKeys as AiSettings)
   return Object.fromEntries(providerOrder.map((provider) => [provider, {
-    apiKey: localSettings[provider]?.apiKey || '',
+    apiKey: localSettings[provider]?.apiKey || cloudSettings?.[provider]?.apiKey || '',
     model: cloudSettings?.[provider]?.model || localSettings[provider]?.model || providerModels[provider][0].id,
   }])) as AiSettings
 }
@@ -36,7 +38,7 @@ export const createEmptyAppSnapshot = (): AppSnapshot => ({
   selectedDateKey: todayDateKey(),
   calendarView: 'day',
 })
-export const snapshotForCloud = (snapshot: AppSnapshot): AppSnapshot => ({
-  ...snapshot,
-  aiSettings: snapshot.aiSettings ? Object.fromEntries(providerOrder.map((provider) => [provider, { apiKey: '', model: snapshot.aiSettings?.[provider]?.model || providerModels[provider][0].id }])) as AiSettings : undefined,
-})
+// Antes se vaciaban las claves antes de subir el documento; ahora se conservan para que el bot de
+// Discord pueda usar la clave de cada persona. La fila sigue protegida por RLS (solo su dueño la
+// lee desde el navegador) y la clave nunca se escribe en localStorage de otro usuario.
+export const snapshotForCloud = (snapshot: AppSnapshot): AppSnapshot => ({ ...snapshot })

@@ -21,6 +21,7 @@ type TopbarProps = {
   user: UserProfile
   onSignOut: (() => void) | undefined
   persistBeforeSignOut: () => Promise<void>
+  onLinkDiscord?: () => void
 }
 
 export function Topbar({
@@ -39,6 +40,7 @@ export function Topbar({
   user,
   onSignOut,
   persistBeforeSignOut,
+  onLinkDiscord,
 }: TopbarProps) {
   const userEmail = user.email
   const initials = userEmail
@@ -132,6 +134,17 @@ export function Topbar({
                 google={google}
                 onClose={() => setProfileOpen(false)}
               />
+
+              {onLinkDiscord && (
+                <button
+                  onClick={() => {
+                    setProfileOpen(false)
+                    onLinkDiscord()
+                  }}
+                >
+                  Vincular Discord
+                </button>
+              )}
 
               {onSignOut ? (
                 <button

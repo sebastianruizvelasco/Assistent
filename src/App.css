@@ -481,6 +481,13 @@ select {
 
 .modal-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(14, 15, 26, .5); backdrop-filter: blur(3px); }
 .add-modal { width: min(480px, 100%); max-height: 94vh; padding: 26px; overflow-y: auto; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-lg); }
+/* Modal de vinculación con Discord: código grande y copiable. */
+.discord-link-modal { width: min(430px, 100%); padding: 26px; border: 1px solid var(--border); border-radius: 20px; background: var(--surface); box-shadow: var(--shadow-lg); }
+.discord-link-steps { margin: 0 0 10px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.link-code { display: block; padding: 14px; border: 1px dashed var(--primary); border-radius: 12px; background: var(--primary-soft); color: var(--primary-text); font: 600 15px var(--font-display); text-align: center; letter-spacing: .03em; overflow-wrap: anywhere; }
+.discord-link-hint { margin: 10px 0 16px; color: var(--faint); font-size: 12px; line-height: 1.5; }
+.discord-link-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.discord-link-actions .primary-action, .discord-link-actions .secondary-action { padding: 9px 14px; font-size: 12px; }
 .modal-heading { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; }
 .modal-heading h2 { margin: 0; color: var(--text); font: 500 26px/1.15 var(--font-display); }
 .modal-close { width: 32px; height: 32px; font-size: 22px; line-height: 1; }

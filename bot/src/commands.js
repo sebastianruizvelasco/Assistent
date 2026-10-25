@@ -3,6 +3,19 @@ import { SlashCommandBuilder } from 'discord.js'
 // Definición de los comandos. `deploy-commands.js` los publica en Discord.
 export const commands = [
   new SlashCommandBuilder()
+    .setName('vincular')
+    .setDescription('Vincula tu cuenta de AURA con este Discord')
+    .addStringOption((option) => option
+      .setName('codigo')
+      .setDescription('Código que muestra AURA en Perfil → Vincular Discord')
+      .setRequired(true)
+      .setMaxLength(12)),
+
+  new SlashCommandBuilder()
+    .setName('desvincular')
+    .setDescription('Quita el vínculo entre este Discord y tu cuenta de AURA'),
+
+  new SlashCommandBuilder()
     .setName('agenda')
     .setDescription('Muestra los eventos de un día')
     .addStringOption((option) => option

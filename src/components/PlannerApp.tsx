@@ -3,6 +3,7 @@ import { AddEventModal } from './AddEventModal'
 import { AssistantPanel } from './AssistantPanel'
 import { CalendarBody } from './CalendarBody'
 import { CalendarHeader } from './CalendarHeader'
+import { DiscordLinkModal } from './DiscordLinkModal'
 import { ProductivityPanel } from './ProductivityPanel'
 import { SectionHub } from './SectionHub'
 import { Topbar } from './Topbar'
@@ -24,7 +25,7 @@ import { durationToMinutes, findAvailableSlot, validateSchedule } from '../lib/s
 import { mergeAiSettings, readStored, snapshotForCloud } from '../lib/snapshot'
 import type { AiSettings, AppSnapshot, CalendarView, ConversationMessage, ConversationSession, EventItem, Memory, Project, ScheduleChange } from '../types'
 
-export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot, localApiKeyStorageKey }: { snapshot?: AppSnapshot; user?: UserProfile; onSignOut?: () => void; onSaveSnapshot?: (data: AppSnapshot) => Promise<void>; localApiKeyStorageKey?: string }) {
+export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot, localApiKeyStorageKey, onLinkDiscord }: { snapshot?: AppSnapshot; user?: UserProfile; onSignOut?: () => void; onSaveSnapshot?: (data: AppSnapshot) => Promise<void>; localApiKeyStorageKey?: string; onLinkDiscord?: () => Promise<{ code: string; expiresAt: string }> }) {
   const user = userProp ?? profileFromUser(null)
   const aiSettingsStorageKey = localApiKeyStorageKey || 'aura-ai-settings'
   const [events, setEvents] = useState<EventItem[]>(() => snapshot?.events || readStored('aura-events', buildInitialEvents()))
@@ -33,6 +34,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
+  const [discordLink, setDiscordLink] = useState<{ code: string; expiresAt: string } | null>(null)
   const [dateMenuOpen, setDateMenuOpen] = useState(false)
   const [selectedDateKey, setSelectedDateKey] = useState(() => snapshot?.selectedDateKey || todayDateKey())
   const [calendarView, setCalendarView] = useState<CalendarView>(() => snapshot?.calendarView || 'day')
@@ -117,8 +119,17 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   const toggleVoice = () => dictation.toggle()
 
-  const toggleTheme = () => {
-    setDarkMode((current) => {
+  // Genera el código de vinculación de Discord y lo muestra en un modal para copiarlo.
+  const linkDiscordAccount = async () => {
+    if (!onLinkDiscord) { showNotice('Inicia sesión para vincular tu cuenta de Discord.'); return }
+    try {
+      setDiscordLink(await onLinkDiscord())
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'No pude generar el código de Discord.')
+    }
+  }
+
+  const toggleTheme = () => {    setDarkMode((current) => {
       const next = !current
       localStorage.setItem('aura-theme', next ? 'dark' : 'light')
       return next
@@ -407,7 +418,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   return (
     <main className={`app-shell ${darkMode ? 'dark-mode' : ''}`}>
-      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} />
+      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} onLinkDiscord={onLinkDiscord ? () => { void linkDiscordAccount() } : undefined} />
 
       <div className="workspace">
         {activeSection !== 'Mi día' && <SectionHub activeSection={activeSection} setProjectFormOpen={setProjectFormOpen} projects={projects} projectFormOpen={projectFormOpen} addProject={addProject} setMemoryFormOpen={setMemoryFormOpen} memories={memories} memoryFormOpen={memoryFormOpen} addMemory={addMemory} />}
@@ -422,6 +433,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
       {notice && <div className="notice" role="status">{notice}</div>}
       {pendingAction && <div className="confirm-bar" role="alert"><span>{pendingMessage || '¿Quieres continuar?'}</span><button onClick={() => { pendingAction(); setPendingAction(null); setPendingMessage('') }}>Confirmar</button><button onClick={() => { setPendingAction(null); setPendingMessage('') }}>Cancelar</button></div>}
       <AddEventModal addEventOpen={addEventOpen} setAddEventOpen={setAddEventOpen} addEvent={addEvent} formEventId={formEventId} events={events} newEventDate={newEventDate} newEventTime={newEventTime} newEventDuration={newEventDuration} flexibilityMode={flexibilityMode} setFlexibilityMode={setFlexibilityMode} reminderCustomEnabled={reminderCustomEnabled} setReminderCustomEnabled={setReminderCustomEnabled} requestNotifications={requestNotifications} />
+      <DiscordLinkModal link={discordLink} onClose={() => setDiscordLink(null)} showNotice={showNotice} />
       <footer><span>Planificado con intención</span><span>Última sincronización: ahora</span></footer>
     </main>
   )

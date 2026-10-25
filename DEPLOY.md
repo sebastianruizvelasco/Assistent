@@ -41,6 +41,7 @@ Cada vez que cambies el código: `npm run build` y vuelve a subir `dist/`.
 - **Discord (solo si usas «Continuar con Discord»)**
   - En el Discord Developer Portal, *OAuth2 > Redirects*: `https://<project-ref>.supabase.co/auth/v1/callback`.
   - En Supabase, *Authentication > Providers > Discord*: activado con su Client ID y Secret.
+- **Supabase > SQL Editor**: ejecuta `supabase/discord.sql` si vas a usar el bot (crea el vínculo entre Discord y AURA).
 
 ## 4. Lista de comprobación
 

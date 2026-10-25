@@ -1,15 +1,14 @@
 // Bot de Discord de AURA. Ejecuta: npm start (después de npm run deploy-commands).
+// Cada persona vincula su cuenta con /vincular y el bot usa su agenda y su clave de IA.
 
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags } from 'discord.js'
 import { applyAssistantAction, buildAssistantContext, buildSeriesCatalog, parseAssistantResult, requestAssistant } from './assistant.js'
-import { addEvent, listEvents, readMemories, removeEvents, saveEvents } from './aura.js'
+import { accountEmail, addEvent, aiSettingsFor, linkDiscordAccount, listEvents, readMemories, removeEvents, resolveUserId, saveEvents, unlinkDiscordAccount } from './aura.js'
 import { addDays, findEventsByTitle, humanDate, normalizeDuration, normalizeTime, resolveDate, shortHumanDate, todayKey } from './dates.js'
 
 const token = process.env.DISCORD_TOKEN
-const userId = process.env.AURA_USER_ID
-
-if (!token || !userId) {
-  console.error('Faltan DISCORD_TOKEN o AURA_USER_ID. Copia bot/.env.example a bot/.env y rellénalo.')
+if (!token) {
+  console.error('Falta DISCORD_TOKEN. Copia bot/.env.example a bot/.env y rellénalo.')
   process.exit(1)
 }
 
@@ -17,10 +16,11 @@ const COLOR = 0x5b5bd6
 const DONE = 0x37a169
 const WARN = 0xd9584f
 
-// Configuración del modelo: una clave y un modelo por bot.
-const aiProvider = process.env.AI_PROVIDER || 'openrouter'
-const aiModel = process.env.AI_MODEL || 'openai/gpt-6.1-sol'
-const aiApiKey = process.env.AI_API_KEY || ''
+// Respaldo si la persona todavía no tiene clave guardada en AURA.
+const fallbackProvider = process.env.AI_PROVIDER || 'openrouter'
+const fallbackModel = process.env.AI_MODEL || 'openai/gpt-6.1-sol'
+const fallbackApiKey = process.env.AI_API_KEY || ''
+const PROVIDER_ORDER = ['openrouter', 'openai', 'gemini', 'anthropic']
 
 // Historial de conversación por persona (en memoria; se pierde al reiniciar el bot).
 const conversations = new Map()
@@ -28,6 +28,7 @@ const conversations = new Map()
 const byTime = (a, b) => String(a.time ?? '').localeCompare(String(b.time ?? ''))
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
 const placeOf = (event) => (event.place && event.place !== 'Agenda personal' ? ` · ${event.place}` : '')
+const normalizeCode = (value) => String(value).trim().toUpperCase().replace(/[^A-Z0-9]/g, '')
 
 const eventLine = (event) => {
   const strike = event.completed ? '~~' : ''
@@ -48,11 +49,12 @@ const dayEmbed = (events, key) => {
 
 const errorEmbed = (message) => new EmbedBuilder().setColor(WARN).setDescription(message)
 
+const linkPrompt = () => 'Este Discord no está vinculado a ninguna cuenta de AURA.\nAbre AURA → tu perfil (arriba a la derecha) → **Vincular Discord** y escribe aquí el comando que te muestra, con `/vincular codigo:`.'
+
 // Próxima hora en punto, para cuando no se indica hora.
 const nextHour = () => {
   const now = new Date()
-  const hour = (now.getHours() + 1) % 24
-  return `${String(hour).padStart(2, '0')}:00`
+  return `${String((now.getHours() + 1) % 24).padStart(2, '0')}:00`
 }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] })
@@ -62,7 +64,7 @@ client.once(Events.ClientReady, (ready) => {
   const logChannel = process.env.DISCORD_LOG_CHANNEL_ID
   if (logChannel) {
     const channel = ready.channels.cache.get(logChannel)
-    if (channel?.isTextBased()) void channel.send('AURA está en línea y lista para consultar tu agenda.').catch(() => undefined)
+    if (channel?.isTextBased()) void channel.send('AURA está en línea. Vincula tu cuenta desde la web y prueba `/agenda`.').catch(() => undefined)
   }
 })
 
@@ -70,6 +72,11 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     // Botones de confirmación de borrado.
     if (interaction.isButton() && interaction.customId.startsWith('aura:borrar:')) {
+      const userId = await resolveUserId(interaction.user.id)
+      if (!userId) {
+        await interaction.reply({ embeds: [errorEmbed(linkPrompt())], flags: MessageFlags.Ephemeral })
+        return
+      }
       const id = Number(interaction.customId.split(':')[2])
       await interaction.deferUpdate()
       const removed = await removeEvents(userId, [id])
@@ -82,6 +89,43 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (!interaction.isChatInputCommand()) return
+
+    if (interaction.commandName === 'vincular') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+      const code = normalizeCode(interaction.options.getString('codigo', true))
+      const result = await linkDiscordAccount({ discordUserId: interaction.user.id, code })
+      if (!result.ok) {
+        await interaction.editReply({
+          embeds: [errorEmbed(result.reason === 'expired'
+            ? 'Ese código caducó. Genera otro en AURA → perfil → **Vincular Discord**.'
+            : 'No existe ningún código así. Revisa que lo copiaste completo y sin espacios.')],
+        })
+        return
+      }
+      const email = await accountEmail(result.userId)
+      await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(DONE)
+          .setTitle('Cuenta vinculada')
+          .setDescription(`Listo${email ? `, este Discord usará la agenda de **${email}**` : ''}. Prueba \`/agenda\` o habla con \`/aura\`.`)
+          .setFooter({ text: 'Puedes deshacerlo con /desvincular' })],
+      })
+      return
+    }
+
+    if (interaction.commandName === 'desvincular') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+      await unlinkDiscordAccount(interaction.user.id)
+      await interaction.editReply({ embeds: [new EmbedBuilder().setColor(COLOR).setDescription('Vínculo eliminado. Este Discord ya no puede ver tu agenda.')] })
+      return
+    }
+
+    // A partir de aquí todo necesita una cuenta vinculada.
+    const userId = await resolveUserId(interaction.user.id)
+    if (!userId) {
+      await interaction.reply({ embeds: [errorEmbed(linkPrompt())], flags: MessageFlags.Ephemeral })
+      return
+    }
 
     if (interaction.commandName === 'agenda') {
       await interaction.deferReply()
@@ -157,10 +201,20 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.commandName === 'aura') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral })
       const text = interaction.options.getString('mensaje', true).trim()
-      if (!aiApiKey) {
-        await interaction.editReply({ embeds: [errorEmbed('Falta AI_API_KEY en bot/.env. Sin clave no puedo conversar, pero /agenda, /semana, /nuevo y /borrar siguen funcionando.')] })
+
+      // Cada persona usa el proveedor y la clave que tiene guardados en AURA.
+      const settings = await aiSettingsFor(userId)
+      const provider = PROVIDER_ORDER.find((name) => settings?.[name]?.apiKey) || fallbackProvider
+      const ownKey = settings?.[provider]?.apiKey || ''
+      const apiKey = ownKey || fallbackApiKey
+      const model = settings?.[provider]?.model || fallbackModel
+      if (!apiKey) {
+        await interaction.editReply({
+          embeds: [errorEmbed('No tienes ninguna clave de IA guardada. Ábrela en AURA → panel del asistente → ajustes de IA, o pide al administrador que configure `AI_API_KEY` en el bot.')],
+        })
         return
       }
+
       const events = await listEvents(userId)
       const memories = await readMemories(userId)
       const now = new Date()
@@ -175,7 +229,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         memories,
         text,
       })
-      const raw = await requestAssistant({ provider: aiProvider, model: aiModel, apiKey: aiApiKey, messages: [...history, { role: 'user', content: context }] })
+      const raw = await requestAssistant({ provider, model, apiKey, messages: [...history, { role: 'user', content: context }] })
       const result = parseAssistantResult(raw)
       const applied = applyAssistantAction({ result, events, now })
       if (applied.changed) await saveEvents(userId, applied.events)
@@ -184,7 +238,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
         embeds: [new EmbedBuilder()
           .setColor(applied.changed ? DONE : COLOR)
           .setDescription(applied.reply)
-          .setFooter({ text: applied.changed ? `${aiProvider} · cambio guardado en AURA` : `${aiProvider} · sin cambios` })],
+          .setFooter({ text: `${provider} · ${ownKey ? 'tu clave' : 'clave del bot'}${applied.changed ? ' · guardado en AURA' : ''}` })],
       })
       return
     }

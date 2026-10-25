@@ -37,7 +37,15 @@ La clave `anon`/publishable de Supabase está diseñada para el cliente y queda 
 
 ## Bot de Discord
 
-`bot/` contiene un bot con comandos —`/aura`, `/agenda`, `/semana`, `/nuevo`, `/borrar`— que lee y escribe tu agenda en Supabase, sin pasar por la interfaz. `/aura` conversa con el mismo modelo y el mismo contrato de acciones que el panel. Necesita un proceso Node encendido (no cabe en InfinityFree). Instrucciones en [`bot/README.md`](bot/README.md).
+`bot/` contiene un bot con comandos —`/vincular`, `/aura`, `/agenda`, `/semana`, `/nuevo`, `/borrar`— que lee y escribe tu agenda en Supabase, sin pasar por la interfaz. `/aura` conversa con el mismo modelo y el mismo contrato de acciones que el panel, usando **la clave de IA de cada persona**.
+
+Para activarlo:
+
+1. Ejecuta [`supabase/discord.sql`](supabase/discord.sql) en el SQL Editor (crea las tablas de vínculos y códigos).
+2. Arranca el bot siguiendo [`bot/README.md`](bot/README.md).
+3. En AURA, abre tu perfil (arriba a la derecha) → **Vincular Discord** → copia el comando y pégalo en Discord.
+
+Necesita un proceso Node encendido (no cabe en InfinityFree).
 
 ## Sincronizar con Google Calendar
 
@@ -74,7 +82,7 @@ La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLO
 ## Almacenamiento y privacidad
 
 - Eventos, proyectos, memorias y conversaciones se sincronizan como un documento JSONB compacto por usuario.
-- Las claves API de los proveedores de IA no se suben a Supabase; permanecen en el almacenamiento local del navegador.
+- Las claves API de los proveedores de IA se guardan en el navegador **y en tu propia fila de Supabase**, para que el bot de Discord pueda usar tu clave. La fila está protegida por RLS: solo tu cuenta la lee desde la app; el bot la lee con la clave de servicio del servidor. Si prefieres que la clave no salga del navegador, no vincules Discord.
 - Si Supabase no está configurado, puedes continuar en modo local. En ese modo los datos solo están disponibles en ese navegador/dispositivo.
 - En el primer inicio cloud de este navegador, AURA migra los datos locales una sola vez; las cuentas nuevas posteriores empiezan separadas. Al cerrar sesión se limpia la caché de agenda del navegador, pero los datos siguen en Supabase.
 
