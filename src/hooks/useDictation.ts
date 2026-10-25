@@ -40,13 +40,31 @@ const getRecognition = (): SpeechRecognitionConstructor | null => {
   return scope.SpeechRecognition || scope.webkitSpeechRecognition || null
 }
 
+const browserName = () => {
+  if (typeof navigator === 'undefined') return 'tu navegador'
+  const agent = navigator.userAgent
+  if (/Firefox\//.test(agent)) return 'Firefox'
+  if (/Edg\//.test(agent)) return 'Edge'
+  if (/OPR\//.test(agent)) return 'Opera'
+  if (/Chrome\//.test(agent)) return 'Chrome'
+  if (/Safari\//.test(agent)) return 'Safari'
+  return 'tu navegador'
+}
+
+const unsupportedMessage = () =>
+  `El dictado no está disponible en ${browserName()}. Usa Chrome o Edge actualizados, o escribe la instrucción.`
+
 const errorMessage = (code: string) => {
-  if (code === 'not-allowed' || code === 'service-not-allowed') return 'El navegador bloqueó el micrófono. Permite el acceso desde la barra de direcciones.'
+  if (code === 'not-allowed' || code === 'service-not-allowed') return 'El navegador bloqueó el micrófono. Revisa el candado de la barra de direcciones y el permiso del sistema.'
   if (code === 'no-speech') return 'No te he oído. Pulsa el micrófono y vuelve a intentarlo.'
   if (code === 'audio-capture') return 'No encontré ningún micrófono conectado.'
   if (code === 'network') return 'El dictado necesita conexión y no pudo conectar.'
   return 'No pude dictar tu mensaje. Vuelve a intentarlo o escríbelo.'
 }
+
+// Espera máxima a que el navegador confirme que empezó a escuchar. Si no llega, se avisa:
+// un permiso pendiente o un fallo silencioso no deben quedarse en «no pasa nada».
+const START_TIMEOUT_MS = 3000
 
 type UseDictationParams = {
   onTranscript: (text: string) => void
@@ -64,6 +82,12 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
 
   useEffect(() => { callbacksRef.current = { onTranscript, onError } })
 
+  // Pista única en la consola para saber qué ve el navegador. Sirve para diagnosticar
+  // «no pasa nada» sin tener que abrir DevTools a adivinar.
+  useEffect(() => {
+    console.info(`[AURA dictado] soporte=${supported} navegador=${browserName()} contextoSeguro=${window.isSecureContext}`)
+  }, [supported])
+
   const stop = useCallback(() => {
     const recognition = recognitionRef.current
     if (!recognition) return
@@ -73,7 +97,7 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
   const start = useCallback(() => {
     const Recognition = getRecognition()
     if (!Recognition) {
-      callbacksRef.current.onError('Este navegador no admite dictado por voz. Prueba Chrome o Edge, o escribe la instrucción.')
+      callbacksRef.current.onError(unsupportedMessage())
       return
     }
     if (recognitionRef.current) return
@@ -82,7 +106,15 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
     recognition.continuous = false
     recognition.interimResults = true
     recognition.maxAlternatives = 1
-    recognition.onstart = () => setListening(true)
+
+    let started = false
+    const watchdog = window.setTimeout(() => {
+      if (started) return
+      callbacksRef.current.onError('El navegador no abrió el micrófono. Acepta el permiso del sitio (candado → Micrófono) y comprueba que ninguna otra pestaña lo esté usando.')
+      try { recognition.abort() } catch { /* el navegador ya lo había cerrado */ }
+    }, START_TIMEOUT_MS)
+
+    recognition.onstart = () => { started = true; window.clearTimeout(watchdog); setListening(true) }
     recognition.onresult = (event) => {
       let final = ''
       let partial = ''
@@ -100,13 +132,14 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
       }
     }
     recognition.onerror = (event) => {
+      window.clearTimeout(watchdog)
       if (event.error === 'aborted') return
-      // Deja rastro en la consola: el código de error distingue permiso denegado por el
-      // navegador, micrófono ocupado o falta de soporte del servicio de reconocimiento.
+      // Deja rastro en la consola: distingue permiso denegado, micrófono ocupado o falta de servicio.
       console.warn(`[AURA dictado] error: ${event.error}`)
       callbacksRef.current.onError(errorMessage(event.error))
     }
     recognition.onend = () => {
+      window.clearTimeout(watchdog)
       recognitionRef.current = null
       setListening(false)
       setInterim('')
@@ -115,6 +148,7 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
     try {
       recognition.start()
     } catch {
+      window.clearTimeout(watchdog)
       recognitionRef.current = null
       callbacksRef.current.onError('No pude activar el micrófono. Inténtalo de nuevo.')
     }

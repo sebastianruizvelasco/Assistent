@@ -352,7 +352,8 @@ select {
 .mic-button, .send-button { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 0; border-radius: 50%; }
 .mic-button { background: transparent; color: var(--muted); }
 .mic-button:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
-.mic-button:disabled { opacity: .4; cursor: not-allowed; }
+/* Sin soporte de dictado el botón sigue siendo pulsable: al pulsarlo explica el motivo. */
+.mic-button.mic-unavailable { opacity: .45; }
 .mic-button.voice-active { background: var(--danger); color: #fff; animation: micPulse 1.4s infinite; }
 .send-button { background: var(--brand-gradient); color: #fff; box-shadow: 0 3px 10px rgba(91, 91, 214, .4); transition: transform .15s; }
 .send-button:hover { transform: scale(1.06); }

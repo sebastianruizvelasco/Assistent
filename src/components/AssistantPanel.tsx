@@ -158,11 +158,10 @@ export function AssistantPanel({
           <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Dile a Aura qué necesitas..." />
           <button
             type="button"
-            className={`mic-button ${voiceActive ? 'voice-active' : ''}`}
+            className={`mic-button ${voiceActive ? 'voice-active' : ''} ${voiceSupported ? '' : 'mic-unavailable'}`}
             aria-label={voiceActive ? 'Detener dictado' : 'Activar dictado'}
             aria-pressed={voiceActive}
-            title={voiceSupported ? (voiceActive ? 'Detener dictado' : 'Dictar con el micrófono') : 'Tu navegador no admite dictado por voz'}
-            disabled={!voiceSupported}
+            title={voiceActive ? 'Detener dictado' : voiceSupported ? 'Dictar con el micrófono' : 'Dictado no disponible en este navegador'}
             onClick={toggleVoice}
           ><MicIcon /></button>
           <button type="submit" className="send-button" aria-label="Enviar mensaje"><SendIcon /></button>
@@ -170,7 +169,7 @@ export function AssistantPanel({
         <p className={`voice-note ${voiceActive ? 'voice-active' : ''}`} aria-live="polite">
           {voiceActive
             ? (voiceInterim ? `Escuchando: “${voiceInterim}”` : 'Escuchando tu instrucción…')
-            : voiceSupported ? 'También puedes hablar con Aura' : 'Tu navegador no admite dictado; escribe la instrucción'}
+            : voiceSupported ? 'También puedes hablar con Aura' : 'Dictado no disponible: usa Chrome o Edge'}
         </p>
       </div>
     </aside>
