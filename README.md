@@ -55,6 +55,10 @@ AURA se sincroniza en dos vías con tu calendario principal de Google: lo que cr
 
 El token de acceso solo vive en la memoria de la pestaña; nunca se guarda ni se sube a Supabase. Junto a cada evento vinculado se guardan el correo de la cuenta de Google y el id del evento espejo (y se sincronizan con tu Supabase si lo usas). **Desconectar** revoca el acceso y limpia el estado de sincronización, pero conserva tus eventos en AURA y en Google.
 
+## Publicar en un dominio
+
+La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLOY.md). El proxy de IA es `api/assistant.ts` en desarrollo y `public/api/assistant.php` en producción.
+
 ## Almacenamiento y privacidad
 
 - Eventos, proyectos, memorias y conversaciones se sincronizan como un documento JSONB compacto por usuario.

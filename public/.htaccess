@@ -1,0 +1,21 @@
+# AURA en hosting Apache (InfinityFree). Vite copia este archivo a dist/.htaccess.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # El front llama a /api/assistant; en este hosting el proxy es un script PHP.
+  RewriteRule ^api/assistant/?$ api/assistant.php [L]
+
+  # Archivos y carpetas reales se sirven tal cual; cualquier otra ruta carga la app (SPA).
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(self)"
+</IfModule>
