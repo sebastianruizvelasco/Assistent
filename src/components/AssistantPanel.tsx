@@ -33,6 +33,7 @@ type AssistantPanelProps = {
   setMessage: Dispatch<SetStateAction<string>>
   voiceActive: boolean
   voiceSupported: boolean
+  voiceRequesting: boolean
   voiceInterim: string
   toggleVoice: () => void
 }
@@ -43,7 +44,7 @@ export function AssistantPanel({
   scheduleProposal, events, setScheduleProposal, selectedDateKey, applyScheduleProposal,
   conversation, isThinking, applyCommand, activeConversationId, setActiveConversationId,
   conversationSessions, duplicateCurrentConversation, startNewConversation, message, setMessage,
-  voiceActive, voiceSupported, voiceInterim, toggleVoice
+  voiceActive, voiceSupported, voiceRequesting, voiceInterim, toggleVoice
 }: AssistantPanelProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
@@ -158,18 +159,21 @@ export function AssistantPanel({
           <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Dile a Aura qué necesitas..." />
           <button
             type="button"
-            className={`mic-button ${voiceActive ? 'voice-active' : ''} ${voiceSupported ? '' : 'mic-unavailable'}`}
+            className={`mic-button ${voiceActive ? 'voice-active' : ''} ${voiceRequesting ? 'voice-requesting' : ''} ${voiceSupported ? '' : 'mic-unavailable'}`}
             aria-label={voiceActive ? 'Detener dictado' : 'Activar dictado'}
             aria-pressed={voiceActive}
+            aria-busy={voiceRequesting}
             title={voiceActive ? 'Detener dictado' : voiceSupported ? 'Dictar con el micrófono' : 'Dictado no disponible en este navegador'}
             onClick={toggleVoice}
           ><MicIcon /></button>
           <button type="submit" className="send-button" aria-label="Enviar mensaje"><SendIcon /></button>
         </form>
         <p className={`voice-note ${voiceActive ? 'voice-active' : ''}`} aria-live="polite">
-          {voiceActive
-            ? (voiceInterim ? `Escuchando: “${voiceInterim}”` : 'Escuchando tu instrucción…')
-            : voiceSupported ? 'También puedes hablar con Aura' : 'Dictado no disponible: usa Chrome o Edge'}
+          {voiceRequesting
+            ? 'Pidiendo permiso del micrófono…'
+            : voiceActive
+              ? (voiceInterim ? `Escuchando: “${voiceInterim}”` : 'Escuchando tu instrucción…')
+              : voiceSupported ? 'También puedes hablar con Aura' : 'Dictado no disponible: usa Chrome o Edge'}
         </p>
       </div>
     </aside>

@@ -354,6 +354,9 @@ select {
 .mic-button:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
 /* Sin soporte de dictado el botón sigue siendo pulsable: al pulsarlo explica el motivo. */
 .mic-button.mic-unavailable { opacity: .45; }
+/* Mientras el navegador muestra el aviso de permiso. */
+.mic-button.voice-requesting { color: var(--primary); animation: micWait 1.2s ease-in-out infinite; }
+@keyframes micWait { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
 .mic-button.voice-active { background: var(--danger); color: #fff; animation: micPulse 1.4s infinite; }
 .send-button { background: var(--brand-gradient); color: #fff; box-shadow: 0 3px 10px rgba(91, 91, 214, .4); transition: transform .15s; }
 .send-button:hover { transform: scale(1.06); }

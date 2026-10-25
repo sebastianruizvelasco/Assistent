@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Dictado con la Web Speech API del navegador. No hay servidor ni clave: el audio lo procesa
-// el propio navegador (Chrome/Edge lo envían a su servicio de reconocimiento).
+// el propio navegador (Chrome/Edge/Opera lo envían a su servicio de reconocimiento).
 
 type SpeechRecognitionAlternativeLike = { transcript: string }
 type SpeechRecognitionResultLike = {
@@ -30,7 +30,7 @@ type SpeechRecognitionLike = {
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike
 
-// El constructor no está en los tipos estándar de TypeScript: en Chrome/Edge es `webkitSpeechRecognition`.
+// El constructor no está en los tipos estándar de TypeScript: en Chromium es `webkitSpeechRecognition`.
 const getRecognition = (): SpeechRecognitionConstructor | null => {
   if (typeof window === 'undefined') return null
   const scope = window as unknown as {
@@ -44,8 +44,8 @@ const browserName = () => {
   if (typeof navigator === 'undefined') return 'tu navegador'
   const agent = navigator.userAgent
   if (/Firefox\//.test(agent)) return 'Firefox'
-  if (/Edg\//.test(agent)) return 'Edge'
   if (/OPR\//.test(agent)) return 'Opera'
+  if (/Edg\//.test(agent)) return 'Edge'
   if (/Chrome\//.test(agent)) return 'Chrome'
   if (/Safari\//.test(agent)) return 'Safari'
   return 'tu navegador'
@@ -55,15 +55,52 @@ const unsupportedMessage = () =>
   `El dictado no está disponible en ${browserName()}. Usa Chrome o Edge actualizados, o escribe la instrucción.`
 
 const errorMessage = (code: string) => {
-  if (code === 'not-allowed' || code === 'service-not-allowed') return 'El navegador bloqueó el micrófono. Revisa el candado de la barra de direcciones y el permiso del sistema.'
+  if (code === 'service-not-allowed') return 'El navegador no permite el dictado en esta página (permisos del sitio bloqueados).'
+  if (code === 'not-allowed') return 'El micrófono está bloqueado para este sitio. Ábrelo desde el candado de la barra de direcciones y reinténtalo.'
   if (code === 'no-speech') return 'No te he oído. Pulsa el micrófono y vuelve a intentarlo.'
   if (code === 'audio-capture') return 'No encontré ningún micrófono conectado.'
   if (code === 'network') return 'El dictado necesita conexión y no pudo conectar.'
   return 'No pude dictar tu mensaje. Vuelve a intentarlo o escríbelo.'
 }
 
+// Traduce el error de getUserMedia, que sí explica con precisión qué pasa con el permiso.
+const microphoneErrorMessage = (error: unknown) => {
+  const name = error instanceof DOMException ? error.name : ''
+  if (name === 'NotAllowedError' || name === 'SecurityError') {
+    return 'No diste permiso al micrófono. Pulsa otra vez y elige «Permitir» (o ábrelo desde el candado de la barra de direcciones).'
+  }
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'No encontré ningún micrófono conectado.'
+  if (name === 'NotReadableError' || name === 'TrackStartError') return 'Otro programa está usando el micrófono. Ciérralo y vuelve a intentarlo.'
+  return 'No pude acceder al micrófono. Revisa los permisos del sitio y de Windows.'
+}
+
+type PermissionResult = { ok: true } | { ok: false; message: string }
+
+// Pide el micrófono de verdad para que el navegador muestre el aviso de permiso.
+// SpeechRecognition no siempre lo dispara (Opera y algunos Chromium arrancan en silencio),
+// así que se abre un stream de audio, se cierra enseguida y después se dicta.
+const ensureMicrophonePermission = async (): Promise<PermissionResult> => {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) return { ok: true }
+  try {
+    const status = await navigator.permissions?.query({ name: 'microphone' as PermissionName })
+    if (status?.state === 'granted') return { ok: true }
+    if (status?.state === 'denied') {
+      return { ok: false, message: 'El micrófono está bloqueado para este sitio. Ábrelo desde el candado de la barra de direcciones y reinténtalo.' }
+    }
+  } catch {
+    // La API de permisos no admite «microphone» en este navegador: seguimos con getUserMedia.
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    stream.getTracks().forEach((track) => track.stop())
+    return { ok: true }
+  } catch (error) {
+    return { ok: false, message: microphoneErrorMessage(error) }
+  }
+}
+
 // Espera máxima a que el navegador confirme que empezó a escuchar. Si no llega, se avisa:
-// un permiso pendiente o un fallo silencioso no deben quedarse en «no pasa nada».
+// un fallo silencioso no debe quedarse en «no pasa nada».
 const START_TIMEOUT_MS = 3000
 
 type UseDictationParams = {
@@ -76,14 +113,15 @@ type UseDictationParams = {
 export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDictationParams) {
   const [supported] = useState(() => Boolean(getRecognition()))
   const [listening, setListening] = useState(false)
+  const [requesting, setRequesting] = useState(false)
   const [interim, setInterim] = useState('')
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
+  const startingRef = useRef(false)
   const callbacksRef = useRef({ onTranscript, onError })
 
   useEffect(() => { callbacksRef.current = { onTranscript, onError } })
 
-  // Pista única en la consola para saber qué ve el navegador. Sirve para diagnosticar
-  // «no pasa nada» sin tener que abrir DevTools a adivinar.
+  // Pista única en la consola para saber qué ve el navegador.
   useEffect(() => {
     console.info(`[AURA dictado] soporte=${supported} navegador=${browserName()} contextoSeguro=${window.isSecureContext}`)
   }, [supported])
@@ -94,13 +132,7 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
     try { recognition.stop() } catch { /* la escucha ya había terminado */ }
   }, [])
 
-  const start = useCallback(() => {
-    const Recognition = getRecognition()
-    if (!Recognition) {
-      callbacksRef.current.onError(unsupportedMessage())
-      return
-    }
-    if (recognitionRef.current) return
+  const startRecognition = useCallback((Recognition: SpeechRecognitionConstructor) => {
     const recognition = new Recognition()
     recognition.lang = lang
     recognition.continuous = false
@@ -154,6 +186,30 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
     }
   }, [lang])
 
+  const start = useCallback(() => {
+    const Recognition = getRecognition()
+    if (!Recognition) {
+      callbacksRef.current.onError(unsupportedMessage())
+      return
+    }
+    if (recognitionRef.current || startingRef.current) return
+    startingRef.current = true
+    setRequesting(true)
+    void (async () => {
+      try {
+        const permission = await ensureMicrophonePermission()
+        if (!permission.ok) {
+          callbacksRef.current.onError(permission.message)
+          return
+        }
+        if (!recognitionRef.current) startRecognition(Recognition)
+      } finally {
+        startingRef.current = false
+        setRequesting(false)
+      }
+    })()
+  }, [startRecognition])
+
   const toggle = useCallback(() => {
     if (recognitionRef.current) stop()
     else start()
@@ -168,5 +224,5 @@ export function useDictation({ onTranscript, onError, lang = 'es-ES' }: UseDicta
     }
   }, [])
 
-  return { supported, listening, interim, start, stop, toggle }
+  return { supported, listening, requesting, interim, start, stop, toggle }
 }
