@@ -1,7 +1,8 @@
 // Bot de Discord de AURA. Ejecuta: npm start (después de npm run deploy-commands).
 
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags } from 'discord.js'
-import { addEvent, listEvents, removeEvents } from './aura.js'
+import { applyAssistantAction, buildAssistantContext, buildSeriesCatalog, parseAssistantResult, requestAssistant } from './assistant.js'
+import { addEvent, listEvents, readMemories, removeEvents, saveEvents } from './aura.js'
 import { addDays, findEventsByTitle, humanDate, normalizeDuration, normalizeTime, resolveDate, shortHumanDate, todayKey } from './dates.js'
 
 const token = process.env.DISCORD_TOKEN
@@ -15,6 +16,14 @@ if (!token || !userId) {
 const COLOR = 0x5b5bd6
 const DONE = 0x37a169
 const WARN = 0xd9584f
+
+// Configuración del modelo: una clave y un modelo por bot.
+const aiProvider = process.env.AI_PROVIDER || 'openrouter'
+const aiModel = process.env.AI_MODEL || 'openai/gpt-6.1-sol'
+const aiApiKey = process.env.AI_API_KEY || ''
+
+// Historial de conversación por persona (en memoria; se pierde al reiniciar el bot).
+const conversations = new Map()
 
 const byTime = (a, b) => String(a.time ?? '').localeCompare(String(b.time ?? ''))
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
@@ -141,6 +150,41 @@ client.on(Events.InteractionCreate, async (interaction) => {
           .setTitle('Evento creado')
           .setDescription(`**${created.title}**\n${capitalize(humanDate(created.date))} a las ${created.time} (${created.duration})${placeOf(created)}`)
           .setFooter({ text: 'Aparecerá en AURA la próxima vez que abras o recargues la app.' })],
+      })
+      return
+    }
+
+    if (interaction.commandName === 'aura') {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral })
+      const text = interaction.options.getString('mensaje', true).trim()
+      if (!aiApiKey) {
+        await interaction.editReply({ embeds: [errorEmbed('Falta AI_API_KEY en bot/.env. Sin clave no puedo conversar, pero /agenda, /semana, /nuevo y /borrar siguen funcionando.')] })
+        return
+      }
+      const events = await listEvents(userId)
+      const memories = await readMemories(userId)
+      const now = new Date()
+      const localTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+      const history = conversations.get(interaction.user.id) || []
+      const context = buildAssistantContext({
+        localDate: todayKey(),
+        localTime,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        seriesCatalog: buildSeriesCatalog(events),
+        events,
+        memories,
+        text,
+      })
+      const raw = await requestAssistant({ provider: aiProvider, model: aiModel, apiKey: aiApiKey, messages: [...history, { role: 'user', content: context }] })
+      const result = parseAssistantResult(raw)
+      const applied = applyAssistantAction({ result, events, now })
+      if (applied.changed) await saveEvents(userId, applied.events)
+      conversations.set(interaction.user.id, [...history, { role: 'user', content: text }, { role: 'assistant', content: applied.reply }].slice(-20))
+      await interaction.editReply({
+        embeds: [new EmbedBuilder()
+          .setColor(applied.changed ? DONE : COLOR)
+          .setDescription(applied.reply)
+          .setFooter({ text: applied.changed ? `${aiProvider} · cambio guardado en AURA` : `${aiProvider} · sin cambios` })],
       })
       return
     }

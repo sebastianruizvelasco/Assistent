@@ -101,7 +101,8 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 ### Discord
 
 - **Acceso**: botón «Continuar con Discord» en la pantalla de acceso mediante `supabase.auth.signInWithOAuth({ provider: 'discord' })`. Requiere habilitar el proveedor Discord en Supabase y su redirect `https://<project-ref>.supabase.co/auth/v1/callback`.
-- **Bot**: `bot/` es un proyecto Node independiente (discord.js + `@supabase/supabase-js` con clave de servicio). Comandos `/agenda`, `/semana`, `/nuevo`, `/borrar`; lee y escribe `events` dentro del JSONB de `public.aura_user_data` conservando el resto del documento.
+- **Bot**: `bot/` es un proyecto Node independiente (discord.js + `@supabase/supabase-js` con clave de servicio). Comandos `/aura`, `/agenda`, `/semana`, `/nuevo`, `/borrar`; lee y escribe `events` dentro del JSONB de `public.aura_user_data` conservando el resto del documento.
+- **`/aura`** replica el panel: mismo `SYSTEM_PROMPT`, mismo contexto (fecha/hora/zona, catálogo de series, eventos, memorias) y mismo contrato JSON (`create_event`, `create_series`, `edit_series`, `reply`). La lógica está en `bot/src/assistant.js` y `bot/src/planner.js`, copia en JS de `src/lib/*.ts`; si cambias una regla en la web, actualízala también ahí.
 - El bot atiende a una sola cuenta (`AURA_USER_ID`); no hay flujo de vinculación multiusuario.
 - El bot corre fuera de InfinityFree (necesita un proceso Node 20+). No debe usarse con la app abierta: el guardado con debounce de la app puede sobrescribir sus cambios.
 

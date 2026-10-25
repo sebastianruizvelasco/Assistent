@@ -47,3 +47,14 @@ export const removeEvents = async (userId, ids) => {
   await saveSnapshot(userId, { ...snapshot, events: events.filter((item) => !ids.includes(item.id)) })
   return removed
 }
+
+// Reemplaza solo la lista de eventos; el resto del documento se conserva.
+export const saveEvents = async (userId, events) => {
+  const snapshot = await readSnapshot(userId)
+  await saveSnapshot(userId, { ...snapshot, events })
+}
+
+export const readMemories = async (userId) => {
+  const snapshot = await readSnapshot(userId)
+  return Array.isArray(snapshot.memories) ? snapshot.memories : []
+}

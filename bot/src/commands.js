@@ -24,6 +24,15 @@ export const commands = [
     .addStringOption((option) => option.setName('lugar').setDescription('Dónde es')),
 
   new SlashCommandBuilder()
+    .setName('aura')
+    .setDescription('Habla con AURA igual que en el panel: agenda, mueve o pregunta')
+    .addStringOption((option) => option
+      .setName('mensaje')
+      .setDescription('Por ejemplo: «agéndame una reunión mañana a las 4»')
+      .setRequired(true)
+      .setMaxLength(1000)),
+
+  new SlashCommandBuilder()
     .setName('borrar')
     .setDescription('Borra un evento por su título')
     .addStringOption((option) => option.setName('titulo').setDescription('Título del evento').setRequired(true)),

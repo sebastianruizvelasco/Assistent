@@ -7,10 +7,32 @@ Supabase que usa la app, así que no hay que sincronizar nada a mano.
 
 | Comando | Qué hace |
 |---|---|
+| `/aura mensaje:<texto>` | Habla con AURA como en el panel: entiende lenguaje natural y **crea, mueve o edita** eventos de verdad. |
 | `/agenda [fecha]` | Eventos de un día (`hoy`, `mañana`, `25/10`, `2026-10-25`). Sin fecha, hoy. |
 | `/semana` | Resumen de los próximos siete días. |
 | `/nuevo titulo:<texto> [fecha] [hora] [duracion] [lugar]` | Crea un evento. Sin hora usa la próxima en punto; sin duración, 30 min. |
 | `/borrar titulo:<texto>` | Busca por título y pide confirmación con botones. |
+
+## Conversar con AURA (`/aura`)
+
+`/aura` usa el mismo prompt, el mismo contexto de agenda y el mismo contrato de acciones JSON que
+el panel de la web (`src/lib/assistant.ts` → `bot/src/assistant.js`). Puedes escribir cosas como:
+
+- «¿qué tengo mañana?»
+- «agéndame una reunión con Laura el jueves a las 4»
+- «crea una rutina de gimnasio de lunes a viernes a las 7»
+- «mueve la serie de gimnasio a las 6:30»
+
+El bot aplica el cambio en Supabase y te confirma qué hizo. La respuesta es **privada** (solo la
+ves tú) porque el contexto incluye tus memorias y preferencias. El historial de la conversación
+vive en memoria y se pierde al reiniciar el bot.
+
+Configura el modelo en `bot/.env` con `AI_PROVIDER`, `AI_MODEL` y `AI_API_KEY`. Sin clave, el
+resto de comandos sigue funcionando.
+
+> Las funciones de `bot/src/planner.js` y `bot/src/assistant.js` son una copia en JavaScript de
+> `src/lib/schedule.ts`, `src/lib/dates.ts` y `src/lib/assistant.ts`. Si cambias una regla en la
+> web, cámbiala también aquí.
 
 ## 1. Crear la aplicación en Discord
 

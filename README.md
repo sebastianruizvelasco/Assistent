@@ -37,7 +37,7 @@ La clave `anon`/publishable de Supabase está diseñada para el cliente y queda 
 
 ## Bot de Discord
 
-`bot/` contiene un bot con comandos —`/agenda`, `/semana`, `/nuevo`, `/borrar`— que lee y escribe tu agenda en Supabase, sin pasar por la interfaz. Necesita un proceso Node encendido (no cabe en InfinityFree). Instrucciones en [`bot/README.md`](bot/README.md).
+`bot/` contiene un bot con comandos —`/aura`, `/agenda`, `/semana`, `/nuevo`, `/borrar`— que lee y escribe tu agenda en Supabase, sin pasar por la interfaz. `/aura` conversa con el mismo modelo y el mismo contrato de acciones que el panel. Necesita un proceso Node encendido (no cabe en InfinityFree). Instrucciones en [`bot/README.md`](bot/README.md).
 
 ## Sincronizar con Google Calendar
 
