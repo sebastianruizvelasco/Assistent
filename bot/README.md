@@ -18,6 +18,24 @@ cuenta de Discord una vez, y a partir de ahí el bot usa **su** agenda y **su** 
 Todo menos `/vincular` y `/desvincular` exige tener la cuenta vinculada; si no, el bot te recuerda
 dónde se genera el código.
 
+## Chat privado (la forma normal de usarlo)
+
+Puedes hablarle por **mensaje directo**, como en WhatsApp: en tu servidor, clic derecho sobre el
+bot → **Mensaje**, y escribe con naturalidad. No hacen falta comandos:
+
+- «¿qué tengo mañana?»
+- «agéndame una reunión con Laura el jueves a las 16:00»
+- «crea una rutina de gimnasio de lunes a viernes a las 7»
+- `vincular K7M2QX` para vincular la cuenta desde el propio chat
+- `desvincular` para cortar el acceso
+
+**Requisito**: activa **Message Content Intent** en el Developer Portal (tu app → **Bot** →
+*Privileged Gateway Intents* → **MESSAGE CONTENT INTENT**). Sin eso el bot no puede leer lo que le
+escribes: al arrancar te avisará y se cerrará.
+
+Si además quieres que responda en un canal concreto del servidor, pon su ID en
+`DISCORD_CHAT_CHANNEL_ID`; si lo dejas vacío, solo habla por privado.
+
 ## 1. Crear la aplicación en Discord
 
 1. Entra en <https://discord.com/developers/applications> → **New Application**.

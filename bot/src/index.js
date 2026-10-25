@@ -1,7 +1,7 @@
 // Bot de Discord de AURA. Ejecuta: npm start (después de npm run deploy-commands).
 // Cada persona vincula su cuenta con /vincular y el bot usa su agenda y su clave de IA.
 
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags } from 'discord.js'
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags, Partials } from 'discord.js'
 import { applyAssistantAction, buildAssistantContext, buildSeriesCatalog, parseAssistantResult, requestAssistant } from './assistant.js'
 import { accountEmail, addEvent, aiSettingsFor, linkDiscordAccount, listEvents, readMemories, removeEvents, resolveUserId, saveEvents, unlinkDiscordAccount } from './aura.js'
 import { addDays, findEventsByTitle, humanDate, normalizeDuration, normalizeTime, resolveDate, shortHumanDate, todayKey } from './dates.js'
@@ -49,7 +49,13 @@ const dayEmbed = (events, key) => {
 
 const errorEmbed = (message) => new EmbedBuilder().setColor(WARN).setDescription(message)
 
-const linkPrompt = () => 'Este Discord no está vinculado a ninguna cuenta de AURA.\nAbre AURA → tu perfil (arriba a la derecha) → **Vincular Discord** y escribe aquí el comando que te muestra, con `/vincular codigo:`.'
+const linkPrompt = () => 'Este Discord no está vinculado a ninguna cuenta de AURA.\nAbre AURA → tu perfil (arriba a la derecha) → **Vincular Discord** y escribe aquí:\n`vincular CODIGO`\n(o el comando `/vincular codigo:…` en el servidor).'
+
+// Envía textos largos partiendo por líneas: Discord corta los mensajes a 2000 caracteres.
+const sendLong = async (target, text) => {
+  const chunks = String(text).match(/[\s\S]{1,1900}/g) || ['']
+  for (const chunk of chunks) await target.send(chunk)
+}
 
 // Próxima hora en punto, para cuando no se indica hora.
 const nextHour = () => {
@@ -57,7 +63,49 @@ const nextHour = () => {
   return `${String((now.getHours() + 1) % 24).padStart(2, '0')}:00`
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] })
+// Núcleo compartido por /aura y por el chat privado: contexto + modelo + acciones aplicadas.
+const askAura = async ({ userId, text, historyKey }) => {
+  const settings = await aiSettingsFor(userId)
+  const provider = PROVIDER_ORDER.find((name) => settings?.[name]?.apiKey) || fallbackProvider
+  const ownKey = settings?.[provider]?.apiKey || ''
+  const apiKey = ownKey || fallbackApiKey
+  const model = settings?.[provider]?.model || fallbackModel
+  if (!apiKey) throw new Error('No tienes ninguna clave de IA guardada. Ábrela en AURA → panel del asistente → ajustes de IA.')
+
+  const events = await listEvents(userId)
+  const memories = await readMemories(userId)
+  const now = new Date()
+  const localTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  const history = conversations.get(historyKey) || []
+  const context = buildAssistantContext({
+    localDate: todayKey(),
+    localTime,
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    seriesCatalog: buildSeriesCatalog(events),
+    events,
+    memories,
+    text,
+  })
+  const raw = await requestAssistant({ provider, model, apiKey, messages: [...history, { role: 'user', content: context }] })
+  const result = parseAssistantResult(raw)
+  const applied = applyAssistantAction({ result, events, now })
+  if (applied.changed) await saveEvents(userId, applied.events)
+  conversations.set(historyKey, [...history, { role: 'user', content: text }, { role: 'assistant', content: applied.reply }].slice(-20))
+  return { reply: applied.reply, changed: applied.changed, ownKey, provider }
+}
+
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    // Chat privado: leer el texto de los mensajes es un intent privilegiado que hay que
+    // activar en el portal (Bot → Privileged Gateway Intents → Message Content Intent).
+    GatewayIntentBits.DirectMessages,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
+  // Los canales de DM no llegan en caché: sin esto el bot no ve el primero de la conversación.
+  partials: [Partials.Channel],
+})
 
 client.once(Events.ClientReady, (ready) => {
   console.log(`AURA en Discord: conectado como ${ready.user.tag} (${ready.guilds.cache.size} servidores).`)
@@ -65,6 +113,51 @@ client.once(Events.ClientReady, (ready) => {
   if (logChannel) {
     const channel = ready.channels.cache.get(logChannel)
     if (channel?.isTextBased()) void channel.send('AURA está en línea. Vincula tu cuenta desde la web y prueba `/agenda`.').catch(() => undefined)
+  }
+})
+
+client.on(Events.MessageCreate, async (message) => {
+  try {
+    if (message.author.bot) return
+    const isDm = message.channel.isDMBased()
+    // Un canal concreto es opcional; por defecto el chat vive en privado.
+    if (!isDm && message.channel.id !== (process.env.DISCORD_CHAT_CHANNEL_ID || '')) return
+    const text = message.content.trim()
+    if (!text) return
+
+    // Vinculación escrita a mano, para no depender de los comandos de barra en privado.
+    const linkMatch = text.match(/^\/?vincular\s+([A-Za-z0-9-]+)$/i)
+    if (linkMatch) {
+      const result = await linkDiscordAccount({ discordUserId: message.author.id, code: normalizeCode(linkMatch[1]) })
+      if (!result.ok) {
+        await message.reply(result.reason === 'expired'
+          ? 'Ese código caducó. Genera otro en AURA → perfil → Vincular Discord.'
+          : 'No existe ningún código así. Revisa que lo copiaste completo.')
+        return
+      }
+      const email = await accountEmail(result.userId)
+      await message.reply(`Listo${email ? `, este Discord usará la agenda de **${email}**` : ''}. Ya puedes hablarme con normalidad.`)
+      return
+    }
+
+    if (/^\/?desvincular\s*$/i.test(text)) {
+      await unlinkDiscordAccount(message.author.id)
+      await message.reply('Vínculo eliminado. Ya no tengo acceso a tu agenda.')
+      return
+    }
+
+    const userId = await resolveUserId(message.author.id)
+    if (!userId) {
+      await message.reply(linkPrompt())
+      return
+    }
+
+    await message.channel.sendTyping()
+    const { reply } = await askAura({ userId, text, historyKey: message.author.id })
+    await sendLong(message.channel, reply)
+  } catch (error) {
+    console.error('Error en el chat privado:', error)
+    await message.reply(`Algo falló: ${error.message}`).catch(() => undefined)
   }
 })
 
@@ -201,44 +294,12 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.commandName === 'aura') {
       await interaction.deferReply({ flags: MessageFlags.Ephemeral })
       const text = interaction.options.getString('mensaje', true).trim()
-
-      // Cada persona usa el proveedor y la clave que tiene guardados en AURA.
-      const settings = await aiSettingsFor(userId)
-      const provider = PROVIDER_ORDER.find((name) => settings?.[name]?.apiKey) || fallbackProvider
-      const ownKey = settings?.[provider]?.apiKey || ''
-      const apiKey = ownKey || fallbackApiKey
-      const model = settings?.[provider]?.model || fallbackModel
-      if (!apiKey) {
-        await interaction.editReply({
-          embeds: [errorEmbed('No tienes ninguna clave de IA guardada. Ábrela en AURA → panel del asistente → ajustes de IA, o pide al administrador que configure `AI_API_KEY` en el bot.')],
-        })
-        return
-      }
-
-      const events = await listEvents(userId)
-      const memories = await readMemories(userId)
-      const now = new Date()
-      const localTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
-      const history = conversations.get(interaction.user.id) || []
-      const context = buildAssistantContext({
-        localDate: todayKey(),
-        localTime,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        seriesCatalog: buildSeriesCatalog(events),
-        events,
-        memories,
-        text,
-      })
-      const raw = await requestAssistant({ provider, model, apiKey, messages: [...history, { role: 'user', content: context }] })
-      const result = parseAssistantResult(raw)
-      const applied = applyAssistantAction({ result, events, now })
-      if (applied.changed) await saveEvents(userId, applied.events)
-      conversations.set(interaction.user.id, [...history, { role: 'user', content: text }, { role: 'assistant', content: applied.reply }].slice(-20))
+      const { reply, changed, ownKey, provider } = await askAura({ userId, text, historyKey: interaction.user.id })
       await interaction.editReply({
         embeds: [new EmbedBuilder()
-          .setColor(applied.changed ? DONE : COLOR)
-          .setDescription(applied.reply)
-          .setFooter({ text: `${provider} · ${ownKey ? 'tu clave' : 'clave del bot'}${applied.changed ? ' · guardado en AURA' : ''}` })],
+          .setColor(changed ? DONE : COLOR)
+          .setDescription(reply)
+          .setFooter({ text: `${provider} · ${ownKey ? 'tu clave' : 'clave del bot'}${changed ? ' · guardado en AURA' : ''}` })],
       })
       return
     }
@@ -282,4 +343,15 @@ const shutdown = (signal) => {
 process.on('SIGINT', () => shutdown('SIGINT'))
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 
-await client.login(token)
+try {
+  await client.login(token)
+} catch (error) {
+  if (/disallowed intents/i.test(String(error.message))) {
+    console.error('Discord rechazó el intent de contenido de mensajes, que hace falta para el chat privado.')
+    console.error('Actívalo en el Developer Portal: tu app → Bot → Privileged Gateway Intents → MESSAGE CONTENT INTENT, y vuelve a arrancar.')
+  } else {
+    console.error('No pude conectar con Discord:', error.message)
+  }
+  await client.destroy().catch(() => undefined)
+  process.exitCode = 1
+}
