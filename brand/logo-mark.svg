@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none" role="img" aria-label="AURA">
+  <title>AURA · marca</title>
+  <defs>
+    <linearGradient id="aura-fill" x1="6" y1="2" x2="44" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset=".55" stop-color="#7c5cf0"/>
+      <stop offset="1" stop-color="#b86cf5"/>
+    </linearGradient>
+    <radialGradient id="aura-sheen" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(14 8) rotate(50) scale(40)">
+      <stop offset="0" stop-color="#fff" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="48" height="48" rx="14" fill="url(#aura-fill)"/>
+  <rect width="48" height="48" rx="14" fill="url(#aura-sheen)"/>
+  <path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+  <path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/>
+</svg>

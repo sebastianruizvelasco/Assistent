@@ -1,0 +1,44 @@
+{
+  "name": "AURA",
+  "tagline": "Autonomous Unified Routine Assistant",
+  "claim": "Tu agenda, contigo.",
+  "gradient": ["#4f46e5", "#7c5cf0", "#b86cf5"],
+  "light": {
+    "bg": "#f5f6fb",
+    "surface": "#ffffff",
+    "border": "#e2e4f0",
+    "borderSoft": "#eff0f8",
+    "text": "#1b1c2e",
+    "muted": "#5f637d",
+    "faint": "#9094ab",
+    "primary": "#5b5bd6",
+    "primaryStrong": "#4a4ac4",
+    "primarySoft": "#eceafd",
+    "onPrimary": "#ffffff"
+  },
+  "dark": {
+    "bg": "#0e0f1a",
+    "surface": "#161726",
+    "border": "#2a2d46",
+    "borderSoft": "#202239",
+    "text": "#eceefa",
+    "muted": "#a3a7c4",
+    "faint": "#70749a",
+    "primary": "#8b89f5",
+    "primaryStrong": "#a3a1f8",
+    "onPrimary": "#13122b"
+  },
+  "events": {
+    "focus": { "bg": "#dfe7ff", "border": "#4f7cf0" },
+    "yellow": { "bg": "#fff3d4", "border": "#f2a516" },
+    "personal": { "bg": "#ffe2de", "border": "#ec6a5c" },
+    "move": { "bg": "#dbf4e5", "border": "#2bab68" },
+    "rest": { "bg": "#ece0ff", "border": "#8c5af0" }
+  },
+  "status": { "danger": "#d63a3a", "success": "#1f9d63", "warning": "#b7791f" },
+  "typography": {
+    "display": { "family": "Fraunces", "weights": [400, 500, 600], "usage": "Marca y títulos" },
+    "body": { "family": "DM Sans", "weights": [400, 500, 600, 700], "usage": "Interfaz y texto" }
+  },
+  "radii": { "default": 16, "small": 10, "pill": 999 }
+}

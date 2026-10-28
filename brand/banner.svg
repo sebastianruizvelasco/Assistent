@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500">
+  <defs>
+  <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#4f46e5"/><stop offset=".55" stop-color="#7c5cf0"/><stop offset="1" stop-color="#b86cf5"/>
+  </linearGradient>
+  <radialGradient id="sheen" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(14 8) rotate(50) scale(40)">
+    <stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#4f46e5"/><stop offset=".55" stop-color="#7c5cf0"/><stop offset="1" stop-color="#b86cf5"/>
+  </linearGradient>
+  <radialGradient id="glow" cx=".2" cy=".1" r="1">
+    <stop offset="0" stop-color="#7c5cf0" stop-opacity=".45"/><stop offset="1" stop-color="#7c5cf0" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+  <rect width="1500" height="500" fill="#0e0f1a"/>
+  <rect width="1500" height="500" fill="url(#glow)"/>
+  <circle cx="1240" cy="250" r="180" stroke="#7c5cf0" stroke-opacity=".22" stroke-width="2" fill="none"/>
+  <circle cx="1240" cy="250" r="250" stroke="#4ad6b8" stroke-opacity=".12" stroke-width="2" fill="none"/>
+  
+  <g transform="translate(96 186) scale(2.6666666666666665)">
+    <rect width="48" height="48" rx="14" fill="url(#grad)"/>
+    <rect width="48" height="48" rx="14" fill="url(#sheen)"/>
+    <path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/>
+  </g>
+  <text x="260" y="268" font-family="Fraunces, Georgia, serif" font-size="86" font-weight="600" fill="#f4f5fb" letter-spacing="2">AURA</text>
+  <text x="262" y="316" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="24" fill="#a3a7c4" letter-spacing="3">AUTONOMOUS UNIFIED ROUTINE ASSISTANT</text>
+  <rect x="262" y="352" width="180" height="6" rx="3" fill="url(#line)"/>
+</svg>

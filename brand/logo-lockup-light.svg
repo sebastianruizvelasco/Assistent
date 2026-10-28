@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" fill="none" role="img" aria-label="AURA">
+  <title>AURA · logotipo horizontal (fondo claro)</title>
+  <defs>
+    <linearGradient id="fill" x1="6" y1="2" x2="44" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset=".55" stop-color="#7c5cf0"/>
+      <stop offset="1" stop-color="#b86cf5"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(14 8) rotate(50) scale(40)">
+      <stop offset="0" stop-color="#fff" stop-opacity=".32"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(0 32) scale(2)">
+    <rect width="48" height="48" rx="14" fill="url(#fill)"/>
+    <rect width="48" height="48" rx="14" fill="url(#sheen)"/>
+    <path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/>
+  </g>
+  <text x="128" y="96" font-family="Fraunces, Georgia, serif" font-size="64" font-weight="600" fill="#1b1c2e" letter-spacing="1">AURA</text>
+  <text x="130" y="126" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" font-weight="500" fill="#5f637d" letter-spacing="2.6">AUTONOMOUS UNIFIED ROUTINE ASSISTANT</text>
+</svg>

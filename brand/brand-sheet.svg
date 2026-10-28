@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1240" viewBox="0 0 1600 1240">
+  <defs>
+  <linearGradient id="grad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#4f46e5"/><stop offset=".55" stop-color="#7c5cf0"/><stop offset="1" stop-color="#b86cf5"/>
+  </linearGradient>
+  <radialGradient id="sheen" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(14 8) rotate(50) scale(40)">
+    <stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#4f46e5"/><stop offset=".55" stop-color="#7c5cf0"/><stop offset="1" stop-color="#b86cf5"/>
+  </linearGradient>
+  <radialGradient id="glow" cx=".2" cy=".1" r="1">
+    <stop offset="0" stop-color="#7c5cf0" stop-opacity=".28"/><stop offset="1" stop-color="#7c5cf0" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+  <rect width="1600" height="1240" fill="#0e0f1a"/>
+  <rect width="1600" height="1180" fill="url(#glow)"/>
+  
+  <g transform="translate(88 72) scale(1.3333333333333333)">
+    <rect width="48" height="48" rx="14" fill="url(#grad)"/>
+    <rect width="48" height="48" rx="14" fill="url(#sheen)"/>
+    <path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/>
+  </g>
+  <text x="172" y="104" font-family="Fraunces, Georgia, serif" font-size="40" font-weight="600" fill="#f4f5fb">AURA</text>
+  <text x="174" y="132" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="16" fill="#70749a" letter-spacing="2">KIT DE MARCA · OCTUBRE 2026</text>
+  <rect x="88" y="168" width="1424" height="1" fill="#2a2d46"/>
+
+  <text x="88" y="222" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#8b89f5" letter-spacing="3">LOGOTIPO</text>
+  <rect x="88" y="244" width="248" height="160" rx="20" fill="#161726"/>
+  <g transform="translate(88 244)">
+  <g transform="translate(94 62) scale(2.1666666666666665)">
+    <rect width="48" height="48" rx="14" fill="url(#grad)"/>
+    <rect width="48" height="48" rx="14" fill="url(#sheen)"/>
+    <path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/>
+  </g></g>
+  <rect x="360" y="244" width="248" height="160" rx="20" fill="#161726"/>
+  <g transform="translate(360 244)"><g transform="translate(94 62) scale(2.16)" fill="none"><path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round"/><path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#ffffff"/></g></g>
+  <rect x="632" y="244" width="248" height="160" rx="20" fill="#f5f6fb"/>
+  <g transform="translate(632 244)"><g transform="translate(94 62) scale(2.16)" fill="none"><path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#1b1c2e" stroke-width="4.4" stroke-linecap="round"/><path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#1b1c2e"/></g></g>
+  <rect x="904" y="244" width="608" height="160" rx="20" fill="#161726"/>
+  <g transform="translate(936 292) scale(1.5)">
+    <rect width="48" height="48" rx="14" fill="url(#grad)"/>
+    <rect width="48" height="48" rx="14" fill="url(#sheen)"/>
+    <path d="M13.5 35.5C13.5 21 18 11.5 24 11.5S34.5 21 34.5 35.5" stroke="#fff" stroke-width="3.6" stroke-linecap="round"/>
+    <path d="M24 20.5l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff"/>
+  </g>
+  <text x="1032" y="316" font-family="Fraunces, Georgia, serif" font-size="46" font-weight="600" fill="#f4f5fb">AURA</text>
+  <text x="1034" y="342" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="12" fill="#9094ab" letter-spacing="2">AUTONOMOUS UNIFIED ROUTINE ASSISTANT</text>
+
+  <text x="88" y="466" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#8b89f5" letter-spacing="3">PALETA · TEMA CLARO</text>
+  
+  <g transform="translate(88 488)">
+    <rect width="92" height="92" rx="16" fill="#f5f6fb"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Fondo</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#f5f6fb</text>
+  </g>
+  <g transform="translate(198 488)">
+    <rect width="92" height="92" rx="16" fill="#ffffff"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Superficie</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#ffffff</text>
+  </g>
+  <g transform="translate(308 488)">
+    <rect width="92" height="92" rx="16" fill="#e2e4f0"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Borde</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#e2e4f0</text>
+  </g>
+  <g transform="translate(418 488)">
+    <rect width="92" height="92" rx="16" fill="#5b5bd6"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Primario</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#5b5bd6</text>
+  </g>
+  <g transform="translate(528 488)">
+    <rect width="92" height="92" rx="16" fill="#1b1c2e"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Texto</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#1b1c2e</text>
+  </g>
+  <g transform="translate(638 488)">
+    <rect width="92" height="92" rx="16" fill="#9094ab"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Texto suave</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#9094ab</text>
+  </g>
+  <text x="88" y="650" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#8b89f5" letter-spacing="3">PALETA · TEMA OSCURO</text>
+  
+  <g transform="translate(88 672)">
+    <rect width="92" height="92" rx="16" fill="#0e0f1a"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Fondo</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#0e0f1a</text>
+  </g>
+  <g transform="translate(198 672)">
+    <rect width="92" height="92" rx="16" fill="#161726"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Superficie</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#161726</text>
+  </g>
+  <g transform="translate(308 672)">
+    <rect width="92" height="92" rx="16" fill="#2a2d46"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Borde</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#2a2d46</text>
+  </g>
+  <g transform="translate(418 672)">
+    <rect width="92" height="92" rx="16" fill="#8b89f5"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Primario</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#8b89f5</text>
+  </g>
+  <g transform="translate(528 672)">
+    <rect width="92" height="92" rx="16" fill="#eceefa"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Texto</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#eceefa</text>
+  </g>
+  <g transform="translate(638 672)">
+    <rect width="92" height="92" rx="16" fill="#70749a"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Texto suave</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#70749a</text>
+  </g>
+  <text x="88" y="834" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#8b89f5" letter-spacing="3">CATEGORÍAS DE EVENTO</text>
+  
+  <g transform="translate(88 856)">
+    <rect width="92" height="92" rx="16" fill="#4f7cf0"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Focus</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#4f7cf0</text>
+  </g>
+  <g transform="translate(198 856)">
+    <rect width="92" height="92" rx="16" fill="#2bab68"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Move</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#2bab68</text>
+  </g>
+  <g transform="translate(308 856)">
+    <rect width="92" height="92" rx="16" fill="#8c5af0"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Rest</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#8c5af0</text>
+  </g>
+  <g transform="translate(418 856)">
+    <rect width="92" height="92" rx="16" fill="#ec6a5c"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Personal</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#ec6a5c</text>
+  </g>
+  <g transform="translate(528 856)">
+    <rect width="92" height="92" rx="16" fill="#f2a516"/>
+    <text x="0" y="116" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#f4f5fb">Aviso</text>
+    <text x="0" y="136" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="13" fill="#70749a">#f2a516</text>
+  </g>
+
+  <text x="88" y="1010" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#8b89f5" letter-spacing="3">TIPOGRAFÍA</text>
+  <text x="88" y="1064" font-family="Fraunces, Georgia, serif" font-size="52" font-weight="600" fill="#f4f5fb">Fraunces</text>
+  <text x="88" y="1098" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" fill="#70749a">Títulos y marca · 500–600</text>
+  <text x="470" y="1064" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="46" font-weight="600" fill="#f4f5fb">DM Sans</text>
+  <text x="470" y="1098" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" fill="#70749a">Interfaz y texto · 400–700</text>
+  <rect x="860" y="1020" width="652" height="8" rx="4" fill="url(#line)"/>
+  <text x="860" y="1064" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="15" fill="#70749a">Gradiente de marca</text>
+  <text x="860" y="1088" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" fill="#5f6579">#4f46e5 → #7c5cf0 → #b86cf5 · 135°</text>
+  <rect x="860" y="1110" width="652" height="1" fill="#2a2d46"/>
+  <text x="860" y="1140" font-family="DM Sans, Segoe UI, Arial, sans-serif" font-size="14" fill="#5f6579">Iconos de evento: focus · move · rest · personal</text>
+</svg>

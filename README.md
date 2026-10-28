@@ -98,6 +98,7 @@ La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLO
 - Dictado con la Web Speech API del navegador (sin servidor ni clave): el texto reconocido se añade al mensaje y no se envía solo. Si el navegador no lo admite, el micrófono queda desactivado.
 - El selector de modelo incluye **Otro modelo (ID personalizado)**: los catálogos de modelos cambian a menudo y así no hace falta esperar a una actualización del código.
 - `tests/`: pruebas de la lógica pura con Vitest (`npm test`).
+- `brand/`: kit de marca con los SVG editables (logotipo, lockup, tarjeta social, banner) y sus PNG exportados.
 - `bot/`: bot de Discord (Node + discord.js) con su propio `package.json` y `README.md`.
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
