@@ -1,10 +1,11 @@
 # Flujo de integración continua de AURA.
 #
-# GitHub no permite crear archivos en .github/workflows/ con un token que no tenga
-# el permiso «workflow». Para activarlo, copia este archivo a
+# GitHub no permite crear archivos dentro de .github/workflows/ con una credencial
+# que no tenga el permiso «workflow». Para activarlo, copia este archivo a
 # .github/workflows/ci.yml desde la web de GitHub (Add file → Create new file)
 # o haz push con un token que incluya ese permiso.
-#name: CI
+
+name: CI
 
 on:
   push:
@@ -28,7 +29,7 @@ jobs:
       - run: npm run build
 
   bot:
-    name: Bot (dependencias y carga de mÃ³dulos)
+    name: Bot (dependencias y carga de módulos)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,12 +37,12 @@ jobs:
         with:
           node-version: 24
       - run: npm ci --prefix bot
-      - name: Cargar los mÃ³dulos del bot
+      - name: Cargar los módulos del bot
         run: |
           node --input-type=module -e "
             await import('./bot/src/commands.js');
             await import('./bot/src/assistant.js');
             await import('./bot/src/calendar-svg.js');
             await import('./bot/src/dates.js');
-            console.log('mÃ³dulos del bot cargados');
+            console.log('módulos del bot cargados');
           "
