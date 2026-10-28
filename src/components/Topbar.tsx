@@ -25,6 +25,8 @@ type TopbarProps = {
   onExportIcs?: () => void
   onExportBackup?: () => void
   onImportBackup?: () => void
+  pushState?: 'unsupported' | 'unconfigured' | 'off' | 'on' | 'denied'
+  onTogglePush?: () => void
 }
 
 export function Topbar({
@@ -47,6 +49,8 @@ export function Topbar({
   onExportIcs,
   onExportBackup,
   onImportBackup,
+  pushState,
+  onTogglePush,
 }: TopbarProps) {
   const userEmail = user.email
   const initials = userEmail
@@ -160,6 +164,15 @@ export function Topbar({
               )}
               {onImportBackup && (
                 <button onClick={() => { setProfileOpen(false); onImportBackup() }}>Restaurar copia</button>
+              )}
+
+              {onTogglePush && (
+                <button
+                  onClick={() => { setProfileOpen(false); onTogglePush() }}
+                  title={pushState === 'on' ? 'El bot te avisa aunque cierres AURA' : 'Avisos del bot aunque la app esté cerrada'}
+                >
+                  {pushState === 'on' ? 'Desactivar recordatorios' : 'Activar recordatorios'}
+                </button>
               )}
 
               {onSignOut ? (

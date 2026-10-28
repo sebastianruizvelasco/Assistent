@@ -30,6 +30,15 @@ export const durationToMinutes = (duration = '30 min') => {
 
 export const formatEventDate = (key) => dateFromKey(key).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
 
+// «30 minutos antes», «1 hora antes» → minutos. Igual que reminderToMinutes de src/lib/schedule.ts.
+export const reminderToMinutes = (reminder) => {
+  const match = String(reminder ?? '').match(/(\d+(?:[.,]\d+)?)\s*(minutos?|min|horas?|h)\s+antes/i)
+  if (!match) return 0
+  const value = Number(match[1].replace(',', '.'))
+  if (!Number.isFinite(value)) return 0
+  return value * (/^(?:h|hora)/i.test(match[2]) ? 60 : 1)
+}
+
 // Misma búsqueda de hueco que la web: pasos de 15 minutos dentro de la ventana pedida.
 export const findAvailableSlot = (events, duration, windowStart, windowEnd) => {
   const start = parseLocalDateTime(windowStart)

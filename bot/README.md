@@ -86,6 +86,31 @@ npm start
 Si rellenas `DISCORD_GUILD_ID`, los comandos aparecen al instante en ese servidor; si lo dejas
 vacío se registran globalmente y pueden tardar hasta una hora.
 
+## Recordatorios con la app cerrada
+
+El bot está encendido siempre, así que también **envía las notificaciones push** de los eventos
+que tienen recordatorio, aunque AURA esté cerrada.
+
+1. Ejecuta `../supabase/migrations/0004_push.sql` en Supabase (crea `push_subscriptions` y `push_sent`).
+2. Genera el par de claves VAPID una sola vez:
+
+   ```bash
+   node -e "console.log(require('web-push').generateVAPIDKeys())"
+   ```
+
+   - La **pública** (`VAPID_PUBLIC_KEY`) va en `bot/.env` **y** en el `.env` de la web como `VITE_VAPID_PUBLIC_KEY`.
+   - La **privada** (`VAPID_PRIVATE_KEY`) solo en `bot/.env`. Si se filtra, cualquiera puede enviar avisos a tus suscriptores: si pasa, genera otro par.
+   - `VAPID_SUBJECT` es un `mailto:` de contacto.
+3. Reinicia el bot: la consola dirá `Recordatorios push: activos (revisión cada minuto)`.
+4. En AURA, avatar → **Activar recordatorios** y acepta el permiso del navegador.
+
+Cómo funciona: cada minuto el bot lee las agendas, calcula los recordatorios que vencen en esa
+ventana (con hasta 15 minutos de tolerancia si estuvo apagado), los envía y apunta en `push_sent`
+lo que ya avisó para no repetirlo. Las suscripciones caducadas (404/410) se borran solas.
+
+Con los avisos push encendidos, la app deja de programar las notificaciones locales para no
+duplicarlas.
+
 ## 4. Vincular tu cuenta
 
 1. Abre AURA en el navegador e inicia sesión.

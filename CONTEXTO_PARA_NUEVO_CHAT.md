@@ -121,6 +121,7 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 - `supabase/migrations/` lleva el esquema versionado (`0001_init`, `0002_discord`, `0003_updated_at`); los `.sql` sueltos de `supabase/` se mantienen por compatibilidad.
 - `.github/workflows/ci.yml` ejecuta tipos, lint, pruebas, build y carga de los módulos del bot en cada push.
 - `public/manifest.webmanifest` + `public/icons/` dan la app instalable (PWA) con los iconos del kit de marca.
+- **Recordatorios push con la app cerrada**: `public/sw.js` (service worker) + `src/lib/push.ts` (suscripción y guardado en `push_subscriptions`) + `bot/src/reminder-runner.js` (el bot revisa cada minuto y envía con `web-push`). Deduplica con `push_sent` y tolera 15 min de retraso. Las claves VAPID: pública en la web, privada solo en el bot.
 
 ## Estructura del código
 

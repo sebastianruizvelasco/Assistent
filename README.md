@@ -89,6 +89,17 @@ En el menú del perfil (arriba a la derecha):
 - **Copia de seguridad**: un `.json` con eventos, proyectos, memorias y conversaciones.
 - **Restaurar copia**: vuelve a importar ese `.json`. Lo importado manda para los ids repetidos y se conserva lo que no venía en el archivo.
 
+## Recordatorios con la app cerrada
+
+Con las notificaciones push activadas (avatar → **Activar recordatorios**), el bot de Discord envía
+los avisos desde el service worker (`public/sw.js`) aunque AURA esté cerrada. Hace falta:
+
+- `VITE_VAPID_PUBLIC_KEY` en `.env` (la privada vive solo en `bot/.env`).
+- La migración `supabase/migrations/0004_push.sql`.
+- El bot encendido: es quien revisa la agenda cada minuto y envía.
+
+Sin el bot, los recordatorios vuelven a depender de tener la pestaña abierta.
+
 ## Instalar como aplicación (PWA)
 
 La app trae `manifest.webmanifest` e iconos, así que el navegador la ofrece como aplicación instalable (Chrome: menú → **Instalar AURA**). Sin service worker todavía: no hay uso sin conexión ni notificaciones con la pestaña cerrada.

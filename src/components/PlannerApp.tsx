@@ -24,6 +24,8 @@ import { dateFromKey, dateKeyFromDate, defaultDateForTime, formatDateLabel, form
 import { durationToMinutes, findAvailableSlot, validateSchedule } from '../lib/schedule'
 import { backupFileName, createBackup, downloadText, eventsToIcs, icsFileName, parseBackup } from '../lib/ics'
 import { mergeSnapshots } from '../lib/snapshot-merge'
+import { disablePush, enablePush, getPushState } from '../lib/push'
+import type { PushState } from '../lib/push'
 import { mergeAiSettings, readStored, snapshotForCloud } from '../lib/snapshot'
 import type { AiSettings, AppSnapshot, CalendarView, ConversationMessage, ConversationSession, EventItem, Memory, Project, ScheduleChange } from '../types'
 
@@ -87,7 +89,28 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const { notice, showNotice } = useNotice()
   useLocalPersistence({ events, projects, memories, aiSettings, aiSettingsStorageKey, conversationSessions, activeConversationId })
   useCloudSync({ events, projects, memories, aiSettings, conversationSessions, activeConversationId, darkMode, selectedDateKey, calendarView }, onSaveSnapshot, showNotice)
-  useReminders(events)
+  // Recordatorios push: si están activos, el bot avisa y no hace falta el temporizador local.
+  const [pushState, setPushState] = useState<PushState>('off')
+  useEffect(() => { void getPushState().then(setPushState).catch(() => setPushState('unsupported')) }, [])
+
+  const togglePush = async () => {
+    try {
+      if (pushState === 'on') {
+        await disablePush()
+        setPushState('off')
+        showNotice('Recordatorios push desactivados.')
+      } else {
+        await enablePush()
+        setPushState('on')
+        showNotice('Recordatorios activados: te avisaré aunque AURA esté cerrada.')
+      }
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'No pude cambiar los recordatorios.')
+      void getPushState().then(setPushState)
+    }
+  }
+
+  useReminders(events, pushState !== 'on')
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const updateFromDevice = (event: MediaQueryListEvent) => { if (!localStorage.getItem('aura-theme')) setDarkMode(event.matches) }
@@ -471,7 +494,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   return (
     <main className={`app-shell ${darkMode ? 'dark-mode' : ''}`}>
-      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} onLinkDiscord={onLinkDiscord ? () => { void linkDiscordAccount() } : undefined} onExportIcs={exportIcs} onExportBackup={exportBackup} onImportBackup={pickBackupFile} />
+      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} onLinkDiscord={onLinkDiscord ? () => { void linkDiscordAccount() } : undefined} onExportIcs={exportIcs} onExportBackup={exportBackup} onImportBackup={pickBackupFile} pushState={pushState} onTogglePush={() => { void togglePush() }} />
 
       <div className="workspace">
         {activeSection !== 'Mi día' && <SectionHub activeSection={activeSection} setProjectFormOpen={setProjectFormOpen} projects={projects} projectFormOpen={projectFormOpen} addProject={addProject} setMemoryFormOpen={setMemoryFormOpen} memories={memories} memoryFormOpen={memoryFormOpen} addMemory={addMemory} />}

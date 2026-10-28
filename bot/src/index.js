@@ -3,8 +3,10 @@
 
 import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags, Partials } from 'discord.js'
 import { applyAssistantAction, buildAssistantContext, buildSeriesCatalog, parseAssistantResult, requestAssistant } from './assistant.js'
-import { accountEmail, addEvent, aiSettingsFor, linkDiscordAccount, listEvents, readMemories, removeEvents, resolveUserId, saveEvents, unlinkDiscordAccount } from './aura.js'
+import { accountEmail, addEvent, aiSettingsFor, linkDiscordAccount, listEvents, readMemories, removeEvents, resolveUserId, saveEvents, supabase, unlinkDiscordAccount } from './aura.js'
 import { dayCalendarPng, weekCalendarPng } from './calendar-image.js'
+import { pushConfigured } from './push.js'
+import { runReminderPass } from './reminder-runner.js'
 import { addDays, findEventsByTitle, humanDate, normalizeDuration, normalizeTime, resolveDate, shortHumanDate, startOfWeekKey, todayKey, weekKeys } from './dates.js'
 
 const token = process.env.DISCORD_TOKEN
@@ -25,6 +27,55 @@ const PROVIDER_ORDER = ['openrouter', 'openai', 'gemini', 'anthropic']
 
 // Historial de conversación por persona (en memoria; se pierde al reiniciar el bot).
 const conversations = new Map()
+
+// Recordatorios: el bot ya está encendido, así que revisa la agenda cada minuto y envía
+// notificaciones Web Push aunque la web esté cerrada.
+const REMINDER_INTERVAL_MS = 60_000
+let reminderTimer = null
+
+const startReminderLoop = () => {
+  if (!pushConfigured) {
+    console.log('Recordatorios push: sin claves VAPID, desactivados.')
+    return
+  }
+  // Si falta la migración, no tiene sentido reintentar cada minuto: se avisa una vez y se para.
+  let stopped = false
+  const stop = (reason) => {
+    stopped = true
+    if (reminderTimer) clearInterval(reminderTimer)
+    reminderTimer = null
+    console.error(`Recordatorios push desactivados: ${reason}`)
+  }
+  const tick = async () => {
+    if (stopped) return
+    try {
+      const { sent } = await runReminderPass()
+      if (sent) console.log(`Recordatorios push enviados: ${sent}`)
+    } catch (error) {
+      const message = error?.message || ''
+      if (/Could not find the table|PGRST205/i.test(message)) {
+        stop('falta ejecutar supabase/migrations/0004_push.sql en Supabase.')
+        return
+      }
+      console.error('Recordatorios push:', message)
+    }
+  }
+  // Comprueba las tablas al arrancar: si faltan, mejor saberlo ahora que cuando toque avisar.
+  const boot = async () => {
+    const { error } = await supabase.from('push_subscriptions').select('endpoint').limit(1)
+    if (error) {
+      stop(/Could not find the table|PGRST205/i.test(error.message)
+        ? 'falta ejecutar supabase/migrations/0004_push.sql en Supabase.'
+        : `no pude leer push_subscriptions (${error.message}).`)
+      return
+    }
+    await tick()
+    if (stopped) return
+    reminderTimer = setInterval(() => { void tick() }, REMINDER_INTERVAL_MS)
+    console.log('Recordatorios push: activos (revisión cada minuto).')
+  }
+  void boot()
+}
 
 const byTime = (a, b) => String(a.time ?? '').localeCompare(String(b.time ?? ''))
 const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1)
@@ -136,6 +187,7 @@ client.once(Events.ClientReady, (ready) => {
     const channel = ready.channels.cache.get(logChannel)
     if (channel?.isTextBased()) void channel.send('AURA está en línea. Vincula tu cuenta desde la web y prueba `/agenda`.').catch(() => undefined)
   }
+  startReminderLoop()
 })
 
 client.on(Events.MessageCreate, async (message) => {
@@ -376,6 +428,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 const shutdown = (signal) => {
   console.log(`Recibido ${signal}, cerrando el bot…`)
+  if (reminderTimer) clearInterval(reminderTimer)
   void client.destroy().finally(() => process.exit(0))
 }
 process.on('SIGINT', () => shutdown('SIGINT'))
