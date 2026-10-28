@@ -94,7 +94,13 @@ respaldo, `/aura` lo explica y el resto de comandos sigue funcionando.
 
 El bot necesita un proceso Node 20+ siempre activo (no puede vivir en InfinityFree).
 
-- **Tu PC**: `pm2 start npm --name aura-bot -- start` + `pm2 save`. Se cae al apagar el equipo.
+- **Tu PC**: desde `bot/`, `pm2 start ecosystem.config.cjs` y luego `pm2 save`. Se cae al apagar
+  el equipo; para que arranque solo al iniciar sesión, `pm2-startup install` (paquete
+  `pm2-windows-startup`).
+
+  En Windows **no** uses `pm2 start npm -- start`: pm2 no reenvía bien los argumentos y falla con
+  `Script not found: …\start`. El `ecosystem.config.cjs` del repo lanza `src/index.js` con
+  `--env-file=.env` y evita ese problema.
 - **Un VPS pequeño** (1 GB de RAM basta): la opción estable.
 - **PaaS con plan gratuito** (Railway, Fly.io, Render): cómodo, pero duermen la instancia o piden
   tarjeta. Si duerme, los comandos no responden.
