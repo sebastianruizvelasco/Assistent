@@ -56,8 +56,25 @@ Cada vez que cambies el código: `npm run build` y vuelve a subir `dist/`.
 - **Verificación de navegador de InfinityFree.** Las cuentas gratuitas exigen JavaScript y cookies en cada petición. Las llamadas del navegador a su propio dominio (como `/api/assistant`) funcionan; lo que no funciona son clientes externos (apps, `curl`, webhooks). Según la documentación de InfinityFree no se puede desactivar en el plan gratuito.
 - **Las claves de IA pasan por tu servidor.** El proxy no las guarda ni las registra; solo las reenvía. Por eso solo acepta peticiones cuyo origen sea tu propio dominio.
 - **El proxy PHP replica a `api/assistant.ts`** (que solo se usa en `npm run dev`). Si cambias la lógica de uno, cambia el otro.
-- **Sin límites de uso propios.** Si algún día lo abres a mucho público, conviene añadir limitación por IP o pasar a un hosting con funciones serverless (el archivo `api/assistant.ts` ya está escrito para poder desplegarse así).
+- **Límite de 30 peticiones por minuto y por IP** en `public/api/assistant.php`. Si algún día lo abres a mucho público, súbelo o pasa a un hosting con funciones serverless (el archivo `api/assistant.ts` ya está escrito para poder desplegarse así).
 
-## Endurecimiento pendiente (opcional)
+## Cabeceras de seguridad
 
-- Añadir una **Content-Security-Policy** en `.htaccess`. No está incluida porque hay que listar con cuidado Supabase, Google Identity Services y el servicio del clima, y una política mal ajustada rompería el inicio de sesión.
+`public/.htaccess` ya incluye `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+`Permissions-Policy` (micrófono habilitado para el propio sitio) y una **Content-Security-Policy**
+que permite solo Supabase, Google Identity Services, Google Fonts, Open-Meteo y Nominatim.
+
+Si añades un servicio externo nuevo, amplía `connect-src` en esa CSP o sus peticiones se bloquearán.
+Para comprobar que nada se rompió, abre la consola del navegador en producción: los bloqueos
+aparecen como *Refused to connect/load*.
+
+## Esquema de la base de datos
+
+Ejecuta en este orden los archivos de `supabase/migrations/` con el SQL Editor:
+
+1. `0001_init.sql` — tabla `aura_user_data` y políticas RLS.
+2. `0002_discord.sql` — vínculos de Discord y códigos de unión (solo si usas el bot).
+3. `0003_updated_at.sql` — trigger que mantiene `updated_at` al día.
+
+Los `.sql` de la raíz de `supabase/` son los originales y sirven igual; las migraciones son la
+versión ordenada y la que conviene seguir usando de ahora en adelante.

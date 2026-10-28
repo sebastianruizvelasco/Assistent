@@ -8,6 +8,8 @@ import { PlannerApp } from './components/PlannerApp'
 import { profileFromUser } from './lib/profile'
 import { createLinkCode, LINK_CODE_TTL_MS } from './lib/discord'
 import { createEmptyAppSnapshot, mergeAiSettings, readLocalAppSnapshot, snapshotForCloud } from './lib/snapshot'
+import { mergeSnapshots } from './lib/snapshot-merge'
+import { normalizeSnapshot } from './lib/validate'
 import type { AppSnapshot } from './types'
 import './App.css'
 
@@ -55,16 +57,16 @@ function App() {
         // cuenta que entraba en el mismo equipo no migraba sus datos locales.
         const migrationKey = `aura-cloud-migration-complete:${userId}`
         const legacyMigration = !data && !localStorage.getItem(migrationKey)
-        let loaded = data?.data && typeof data.data === 'object'
-          ? data.data as AppSnapshot
-          : legacyMigration ? readLocalAppSnapshot() : createEmptyAppSnapshot()
+        // Se valida y limpia lo que llega: una fila con JSON raro no debe romper la agenda.
+        const fromCloud = normalizeSnapshot(data?.data)
+        let loaded = fromCloud ?? (legacyMigration ? readLocalAppSnapshot() : createEmptyAppSnapshot())
         if (legacyMigration) {
           const legacySettings = localStorage.getItem('aura-ai-settings')
           if (legacySettings && !localStorage.getItem(apiKeyStorageKey)) localStorage.setItem(apiKeyStorageKey, legacySettings)
           localStorage.removeItem('aura-ai-settings')
         }
         if (!data) {
-          const { error: migrationError } = await client.from('aura_user_data').upsert({ user_id: userId, data: snapshotForCloud(loaded) }, { onConflict: 'user_id' })
+          const { error: migrationError } = await client.from('aura_user_data').upsert({ user_id: userId, data: snapshotForCloud(loaded), updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
           if (migrationError) throw migrationError
         }
         if (!active) return
@@ -124,7 +126,15 @@ function App() {
 
   const saveSnapshot = async (data: AppSnapshot) => {
     if (!supabase || !session?.user.id) return
-    const { error } = await supabase.from('aura_user_data').upsert({ user_id: session.user.id, data: snapshotForCloud(data) }, { onConflict: 'user_id' })
+    const userId = session.user.id
+    const payload = snapshotForCloud(data)
+    // Lee lo último antes de escribir: el bot de Discord (u otro dispositivo) puede haber añadido
+    // eventos mientras esta pestaña estaba abierta, y el documento se guarda completo.
+    const { data: current, error: readError } = await supabase.from('aura_user_data').select('data').eq('user_id', userId).maybeSingle()
+    if (readError) throw readError
+    const remote = normalizeSnapshot(current?.data)
+    const merged = mergeSnapshots(payload, remote)
+    const { error } = await supabase.from('aura_user_data').upsert({ user_id: userId, data: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
     if (error) throw error
   }
 

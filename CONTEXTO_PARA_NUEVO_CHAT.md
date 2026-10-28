@@ -118,12 +118,15 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 - Los comandos de IA pasan por `applyCommand` (`src/hooks/useAssistant.ts`); sus respuestas se parsean como acciones JSON antes de cambiar el calendario.
 - `vite.config.ts` implementa el proxy de desarrollo de IA. Las claves introducidas en el panel se guardan en el navegador y no se sincronizan a Supabase.
 - `src/supabase.ts` implementa la conexión opcional a Auth/Postgres.
+- `supabase/migrations/` lleva el esquema versionado (`0001_init`, `0002_discord`, `0003_updated_at`); los `.sql` sueltos de `supabase/` se mantienen por compatibilidad.
+- `.github/workflows/ci.yml` ejecuta tipos, lint, pruebas, build y carga de los módulos del bot en cada push.
+- `public/manifest.webmanifest` + `public/icons/` dan la app instalable (PWA) con los iconos del kit de marca.
 
 ## Estructura del código
 
 - `src/App.tsx`: sesión de Supabase, carga/guardado del snapshot y elección de pantalla (acceso o agenda).
 - `src/types.ts`, `src/constants.ts`, `src/initialData.ts`: tipos, catálogos de modelos y datos iniciales.
-- `src/lib/`: lógica pura sin React. `dates.ts` (fechas locales), `schedule.ts` (duraciones, recordatorios, huecos libres, series, validación del horario), `snapshot.ts` (lectura/mezcla de datos locales y cloud), `profile.ts` (nombre, foto e iniciales del usuario a partir de la cuenta de Supabase/Google), `assistant.ts` (prompt, llamada a `/api/assistant`, lectura de la acción JSON).
+- `src/lib/`: lógica pura sin React. `dates.ts` (fechas locales), `schedule.ts` (duraciones, recordatorios, huecos libres, series, validación del horario), `snapshot.ts` (lectura/mezcla de datos locales y cloud), `snapshot-merge.ts` (unión por id para no pisar lo que escribió el bot), `validate.ts` (saneado del JSON que llega de Supabase), `ics.ts` (exportar `.ics` y copias `.json`), `profile.ts` (nombre, foto e iniciales del usuario a partir de la cuenta de Supabase/Google), `assistant.ts` (prompt, llamada a `/api/assistant`, lectura de la acción JSON).
 - `src/hooks/`: `useAssistant` (`applyCommand`, `organizeSelectedDay`), `useGoogleCalendar`, `useCloudSync`, `useLocalPersistence`, `useReminders`, `useClock`, `useWeather`, `useNotice`.
 - `src/components/`: `PlannerApp` (contenedor), `Topbar`, `CalendarHeader`, `CalendarBody` (vistas día/semana/mes/año), `ProductivityPanel`, `AssistantPanel`, `AddEventModal`, `SectionHub` (Proyectos y Memoria), `AuthScreen`, `LoadingScreen`, `UserMenu` (botón con el nombre del usuario y su menú), `GoogleCalendarMenu`.
 

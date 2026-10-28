@@ -32,6 +32,26 @@ function aura_upstream_error($data)
     return 'El proveedor de IA no devolvió una respuesta válida.';
 }
 
+// Límite por IP: 30 peticiones por minuto. Sin esto, un script puede usar el proxy como relay
+// con su propia clave y consumir los recursos del hosting.
+function aura_rate_limited($limit = 30, $window = 60)
+{
+    $dir = sys_get_temp_dir() . '/aura-ratelimit';
+    if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+        return false; // sin sitio para contar, no se bloquea a nadie
+    }
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'desconocida';
+    $file = $dir . '/' . sha1($ip) . '.json';
+    $now = time();
+    $data = is_file($file) ? json_decode((string) @file_get_contents($file), true) : null;
+    if (!is_array($data) || !isset($data['start'], $data['count']) || ($now - (int) $data['start']) > $window) {
+        $data = ['start' => $now, 'count' => 0];
+    }
+    $data['count'] = (int) $data['count'] + 1;
+    @file_put_contents($file, json_encode($data), LOCK_EX);
+    return $data['count'] > $limit;
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
     header('Allow: POST');
     aura_respond(405, ['error' => 'Método no permitido.']);
@@ -42,6 +62,11 @@ $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 $host = $_SERVER['HTTP_HOST'] ?? '';
 if ($origin !== '' && strcasecmp((string) parse_url($origin, PHP_URL_HOST), preg_replace('/:\d+$/', '', $host)) !== 0) {
     aura_respond(403, ['error' => 'Origen no permitido.']);
+}
+
+if (aura_rate_limited()) {
+    header('Retry-After: 60');
+    aura_respond(429, ['error' => 'Demasiadas peticiones seguidas. Espera un minuto e inténtalo de nuevo.']);
 }
 
 $raw = file_get_contents('php://input');

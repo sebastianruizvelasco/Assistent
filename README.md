@@ -79,6 +79,22 @@ El token de acceso solo vive en la memoria de la pestaña; nunca se guarda ni se
 
 La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLOY.md). El proxy de IA es `api/assistant.ts` en desarrollo y `public/api/assistant.php` en producción.
 
+## Copias de seguridad y exportación
+
+En el menú del perfil (arriba a la derecha):
+
+- **Exportar agenda (.ics)**: descarga un calendario con todos los eventos, listo para Google Calendar, Apple Calendar u Outlook.
+- **Copia de seguridad**: un `.json` con eventos, proyectos, memorias y conversaciones.
+- **Restaurar copia**: vuelve a importar ese `.json`. Lo importado manda para los ids repetidos y se conserva lo que no venía en el archivo.
+
+## Instalar como aplicación (PWA)
+
+La app trae `manifest.webmanifest` e iconos, así que el navegador la ofrece como aplicación instalable (Chrome: menú → **Instalar AURA**). Sin service worker todavía: no hay uso sin conexión ni notificaciones con la pestaña cerrada.
+
+## Despliegue continuo
+
+`.github/workflows/ci.yml` ejecuta en cada push y en cada PR: `tsc`, lint, las pruebas, el build y una carga de los módulos del bot. El despliegue en InfinityFree sigue siendo manual (`npm run build` + subir `dist/`).
+
 ## Almacenamiento y privacidad
 
 - Eventos, proyectos, memorias y conversaciones se sincronizan como un documento JSONB compacto por usuario.

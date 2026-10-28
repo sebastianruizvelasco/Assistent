@@ -22,6 +22,9 @@ type TopbarProps = {
   onSignOut: (() => void) | undefined
   persistBeforeSignOut: () => Promise<void>
   onLinkDiscord?: () => void
+  onExportIcs?: () => void
+  onExportBackup?: () => void
+  onImportBackup?: () => void
 }
 
 export function Topbar({
@@ -41,6 +44,9 @@ export function Topbar({
   onSignOut,
   persistBeforeSignOut,
   onLinkDiscord,
+  onExportIcs,
+  onExportBackup,
+  onImportBackup,
 }: TopbarProps) {
   const userEmail = user.email
   const initials = userEmail
@@ -144,6 +150,16 @@ export function Topbar({
                 >
                   Vincular Discord
                 </button>
+              )}
+
+              {onExportIcs && (
+                <button onClick={() => { setProfileOpen(false); onExportIcs() }}>Exportar agenda (.ics)</button>
+              )}
+              {onExportBackup && (
+                <button onClick={() => { setProfileOpen(false); onExportBackup() }}>Copia de seguridad</button>
+              )}
+              {onImportBackup && (
+                <button onClick={() => { setProfileOpen(false); onImportBackup() }}>Restaurar copia</button>
               )}
 
               {onSignOut ? (

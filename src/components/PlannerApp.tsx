@@ -22,6 +22,8 @@ import { useWeather } from '../hooks/useWeather'
 import { buildInitialEvents, initialMemories, initialProjects } from '../initialData'
 import { dateFromKey, dateKeyFromDate, defaultDateForTime, formatDateLabel, formatEventDate, nextAvailableTime, parseLocalDateTime, shiftLocalDateTime, startOfWeek, todayDateKey } from '../lib/dates'
 import { durationToMinutes, findAvailableSlot, validateSchedule } from '../lib/schedule'
+import { backupFileName, createBackup, downloadText, eventsToIcs, icsFileName, parseBackup } from '../lib/ics'
+import { mergeSnapshots } from '../lib/snapshot-merge'
 import { mergeAiSettings, readStored, snapshotForCloud } from '../lib/snapshot'
 import type { AiSettings, AppSnapshot, CalendarView, ConversationMessage, ConversationSession, EventItem, Memory, Project, ScheduleChange } from '../types'
 
@@ -118,6 +120,44 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   })
 
   const toggleVoice = () => dictation.toggle()
+
+  // Exportación e importación: .ics para llevar la agenda a otro calendario y .json como copia.
+  const exportIcs = () => {
+    downloadText(icsFileName(), eventsToIcs(events, { calendarName: 'AURA' }), 'text/calendar')
+    showNotice(`Exportados ${events.length} evento${events.length === 1 ? '' : 's'} a .ics.`)
+  }
+
+  const exportBackup = () => {
+    const snapshot = { events, projects, memories, aiSettings, conversationSessions, activeConversationId, darkMode, selectedDateKey, calendarView }
+    downloadText(backupFileName(), JSON.stringify(createBackup(snapshotForCloud(snapshot)), null, 2), 'application/json')
+    showNotice('Copia de seguridad descargada.')
+  }
+
+  const importBackup = async (file: File) => {
+    try {
+      const parsed = parseBackup(JSON.parse(await file.text()))
+      if (!parsed) throw new Error('El archivo no tiene el formato de una copia de AURA.')
+      // Lo importado manda sobre lo que ya hay para los mismos ids; se conserva lo que no venía.
+      const merged = mergeSnapshots(parsed, { events, projects, memories })
+      setEvents(merged.events || [])
+      setProjects(merged.projects || [])
+      setMemories(merged.memories || [])
+      showNotice(`Copia restaurada: ${merged.events?.length ?? 0} eventos y ${merged.memories?.length ?? 0} memorias.`)
+    } catch (error) {
+      showNotice(error instanceof Error ? error.message : 'No pude leer esa copia de seguridad.')
+    }
+  }
+
+  const pickBackupFile = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'application/json,.json'
+    input.onchange = () => {
+      const file = input.files?.[0]
+      if (file) void importBackup(file)
+    }
+    input.click()
+  }
 
   // Genera el código de vinculación de Discord y lo muestra en un modal para copiarlo.
   const linkDiscordAccount = async () => {
@@ -431,7 +471,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   return (
     <main className={`app-shell ${darkMode ? 'dark-mode' : ''}`}>
-      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} onLinkDiscord={onLinkDiscord ? () => { void linkDiscordAccount() } : undefined} />
+      <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} onLinkDiscord={onLinkDiscord ? () => { void linkDiscordAccount() } : undefined} onExportIcs={exportIcs} onExportBackup={exportBackup} onImportBackup={pickBackupFile} />
 
       <div className="workspace">
         {activeSection !== 'Mi día' && <SectionHub activeSection={activeSection} setProjectFormOpen={setProjectFormOpen} projects={projects} projectFormOpen={projectFormOpen} addProject={addProject} setMemoryFormOpen={setMemoryFormOpen} memories={memories} memoryFormOpen={memoryFormOpen} addMemory={addMemory} />}
