@@ -129,7 +129,20 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     }
   }
 
-  const toggleTheme = () => {    setDarkMode((current) => {
+  // Guarda las claves en la cuenta al instante. El guardado normal espera 1,2 s y se pierde si
+  // se recarga la página justo después, que es lo que dejaba al bot sin clave.
+  const saveCredentials = async () => {
+    if (!onSaveSnapshot) { showNotice('Modo local: la clave solo se guarda en este navegador.'); return }
+    try {
+      await onSaveSnapshot(snapshotForCloud({ events, projects, memories, aiSettings, conversationSessions, activeConversationId, darkMode, selectedDateKey, calendarView }))
+      showNotice('Claves guardadas en tu cuenta. El bot ya puede usarlas.')
+    } catch (error) {
+      showNotice(error instanceof Error ? `No pude guardar la clave: ${error.message}` : 'No pude guardar la clave en tu cuenta.')
+    }
+  }
+
+  const toggleTheme = () => {
+    setDarkMode((current) => {
       const next = !current
       localStorage.setItem('aura-theme', next ? 'dark' : 'light')
       return next
@@ -428,7 +441,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
         </section>
         <ProductivityPanel activeSection={activeSection} completedCount={completedCount} selectedDayEvents={selectedDayEvents} totalMinutes={totalMinutes} conflictIds={conflictIds} priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter} setShowCompleted={setShowCompleted} showCompleted={showCompleted} isThinking={isThinking} organizeSelectedDay={organizeSelectedDay} events={events} openEditEvent={openEditEvent} removeEvent={removeEvent} />
 
-        <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} showNotice={showNotice} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={dictation.listening} voiceSupported={dictation.supported} voiceRequesting={dictation.requesting} voiceInterim={dictation.interim} toggleVoice={toggleVoice} />
+        <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} onSaveCredentials={saveCredentials} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={dictation.listening} voiceSupported={dictation.supported} voiceRequesting={dictation.requesting} voiceInterim={dictation.interim} toggleVoice={toggleVoice} />
       </div>
       {notice && <div className="notice" role="status">{notice}</div>}
       {pendingAction && <div className="confirm-bar" role="alert"><span>{pendingMessage || '¿Quieres continuar?'}</span><button onClick={() => { pendingAction(); setPendingAction(null); setPendingMessage('') }}>Confirmar</button><button onClick={() => { setPendingAction(null); setPendingMessage('') }}>Cancelar</button></div>}

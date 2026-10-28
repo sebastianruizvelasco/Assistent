@@ -15,7 +15,8 @@ type AssistantPanelProps = {
   aiSettingsOpen: boolean
   aiSettings: AiSettings
   updateAiSetting: (provider: keyof typeof providerModels, key: "apiKey" | "model", value: string) => void
-  showNotice: (text: string) => void
+  // Escribe las claves en la cuenta al instante: sin esperar al guardado con retardo.
+  onSaveCredentials: () => Promise<void>
   scheduleProposal: { date: string; changes: ScheduleChange[]; summary: string; } | null
   events: EventItem[]
   setScheduleProposal: Dispatch<SetStateAction<{ date: string; changes: ScheduleChange[]; summary: string; } | null>>
@@ -40,7 +41,8 @@ type AssistantPanelProps = {
 
 export function AssistantPanel({
   activeSection, selectedProvider, handleProviderChange, setAiSettingsOpen, selectedModel,
-  setSelectedModel, setAiSettings, aiSettingsOpen, aiSettings, updateAiSetting, showNotice,
+  setSelectedModel, setAiSettings, aiSettingsOpen, aiSettings, updateAiSetting,
+  onSaveCredentials,
   scheduleProposal, events, setScheduleProposal, selectedDateKey, applyScheduleProposal,
   conversation, isThinking, applyCommand, activeConversationId, setActiveConversationId,
   conversationSessions, duplicateCurrentConversation, startNewConversation, message, setMessage,
@@ -110,7 +112,7 @@ export function AssistantPanel({
           ))}
           <div className="ai-settings-actions">
             <button type="button" className="secondary-action" onClick={() => setAiSettingsOpen(false)}>Cerrar</button>
-            <button type="button" className="primary-action" onClick={() => { setAiSettingsOpen(false); showNotice('Credenciales guardadas en tu navegador.') }}>Guardar</button>
+            <button type="button" className="primary-action" onClick={() => { setAiSettingsOpen(false); void onSaveCredentials() }}>Guardar</button>
           </div>
         </div>
       )}

@@ -70,7 +70,7 @@ const askAura = async ({ userId, text, historyKey }) => {
   const ownKey = settings?.[provider]?.apiKey || ''
   const apiKey = ownKey || fallbackApiKey
   const model = settings?.[provider]?.model || fallbackModel
-  if (!apiKey) throw new Error('No tienes ninguna clave de IA guardada. Ábrela en AURA → panel del asistente → ajustes de IA.')
+  if (!apiKey) throw new Error('No hay ninguna clave de IA guardada en esta cuenta. Abre AURA con la cuenta vinculada, ve al panel del asistente → ajustes de IA, pega la clave y pulsa Guardar.')
 
   const events = await listEvents(userId)
   const memories = await readMemories(userId)
