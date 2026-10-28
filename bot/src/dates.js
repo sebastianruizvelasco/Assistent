@@ -18,6 +18,16 @@ export const addDays = (key, days) => {
 
 export const todayKey = () => dateKey(new Date())
 
+// Lunes de la semana de `key` (0 = domingo en JS, pero la semana empieza en lunes).
+export const startOfWeekKey = (key = todayKey()) => {
+  const date = parseDateKey(key)
+  const weekday = date.getDay()
+  date.setDate(date.getDate() - (weekday === 0 ? 6 : weekday - 1))
+  return dateKey(date)
+}
+
+export const weekKeys = (startKey) => Array.from({ length: 7 }, (_, index) => addDays(startKey, index))
+
 export const isDateKey = (value) => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(parseDateKey(value).getTime())
 
 // «hoy», «mañana», «pasado mañana», «25/10», «2026-10-25» → clave de fecha.

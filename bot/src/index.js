@@ -1,10 +1,11 @@
 // Bot de Discord de AURA. Ejecuta: npm start (después de npm run deploy-commands).
 // Cada persona vincula su cuenta con /vincular y el bot usa su agenda y su clave de IA.
 
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags, Partials } from 'discord.js'
+import { ActionRowBuilder, AttachmentBuilder, ButtonBuilder, ButtonStyle, Client, EmbedBuilder, Events, GatewayIntentBits, MessageFlags, Partials } from 'discord.js'
 import { applyAssistantAction, buildAssistantContext, buildSeriesCatalog, parseAssistantResult, requestAssistant } from './assistant.js'
 import { accountEmail, addEvent, aiSettingsFor, linkDiscordAccount, listEvents, readMemories, removeEvents, resolveUserId, saveEvents, unlinkDiscordAccount } from './aura.js'
-import { addDays, findEventsByTitle, humanDate, normalizeDuration, normalizeTime, resolveDate, shortHumanDate, todayKey } from './dates.js'
+import { dayCalendarPng, weekCalendarPng } from './calendar-image.js'
+import { addDays, findEventsByTitle, humanDate, normalizeDuration, normalizeTime, resolveDate, shortHumanDate, startOfWeekKey, todayKey, weekKeys } from './dates.js'
 
 const token = process.env.DISCORD_TOKEN
 if (!token) {
@@ -55,6 +56,27 @@ const linkPrompt = () => 'Este Discord no está vinculado a ninguna cuenta de AU
 const sendLong = async (target, text) => {
   const chunks = String(text).match(/[\s\S]{1,1900}/g) || ['']
   for (const chunk of chunks) await target.send(chunk)
+}
+
+// Detecta «mándame una foto de la agenda», «cómo se ve mi semana», «pásame el calendario».
+const IMAGE_HINT = /(imagen|foto|captura|pantallazo|pantalla|\bpng\b|adjunt)/i
+const CALENDAR_WORD = /(calendario|agenda|semana|horario|eventos|d[ií]a)/i
+const looksLikeImageRequest = (text) => (IMAGE_HINT.test(text) && CALENDAR_WORD.test(text))
+  || /(m[aá]nda(me|r)?|env[ií]a(me|r)?|p[aá]sa(me|r)?|mu[eé]stra(me)?|ens[eé]ñame|dame).{0,32}(calendario|agenda|semana|horario)/i.test(text)
+
+const wantsWeek = (text) => /\bsemana\b/i.test(text)
+
+// Genera el PNG del día o de la semana y lo devuelve como adjunto listo para Discord.
+const buildCalendarFiles = async ({ userId, dateKey, view }) => {
+  const events = await listEvents(userId)
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  if (view === 'week') {
+    const start = startOfWeekKey(dateKey || todayKey())
+    const days = weekKeys(start).map((key) => ({ key, events: events.filter((event) => event.date === key), isToday: key === todayKey() }))
+    return [new AttachmentBuilder(weekCalendarPng({ days, timeZone }), { name: `aura-semana-${start}.png` })]
+  }
+  const day = dateKey || todayKey()
+  return [new AttachmentBuilder(dayCalendarPng({ dateKey: day, events: events.filter((event) => event.date === day), timeZone }), { name: `aura-${day}.png` })]
 }
 
 // Próxima hora en punto, para cuando no se indica hora.
@@ -153,6 +175,13 @@ client.on(Events.MessageCreate, async (message) => {
     }
 
     await message.channel.sendTyping()
+    if (looksLikeImageRequest(text)) {
+      const isWeek = wantsWeek(text)
+      const dateKey = isWeek ? todayKey() : (/mañana|manana/i.test(text) ? addDays(todayKey(), 1) : todayKey())
+      const files = await buildCalendarFiles({ userId, dateKey, view: isWeek ? 'week' : 'day' })
+      await message.reply({ files })
+      return
+    }
     const { reply } = await askAura({ userId, text, historyKey: message.author.id })
     await sendLong(message.channel, reply)
   } catch (error) {
@@ -217,6 +246,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
     const userId = await resolveUserId(interaction.user.id)
     if (!userId) {
       await interaction.reply({ embeds: [errorEmbed(linkPrompt())], flags: MessageFlags.Ephemeral })
+      return
+    }
+
+    if (interaction.commandName === 'imagen') {
+      await interaction.deferReply()
+      const view = interaction.options.getString('vista') === 'week' ? 'week' : 'day'
+      const dateKey = resolveDate(interaction.options.getString('fecha')) || todayKey()
+      const files = await buildCalendarFiles({ userId, dateKey, view })
+      await interaction.editReply({ files })
       return
     }
 

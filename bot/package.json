@@ -12,6 +12,7 @@
     "deploy-commands": "node --env-file=.env src/deploy-commands.js"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.118.0",
     "discord.js": "^14.16.3"
   }

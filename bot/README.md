@@ -10,10 +10,25 @@ cuenta de Discord una vez, y a partir de ahí el bot usa **su** agenda y **su** 
 | `/vincular codigo:<código>` | Vincula este Discord con tu cuenta de AURA. El código se genera en la web. |
 | `/desvincular` | Quita el vínculo; el bot deja de ver tu agenda. |
 | `/aura mensaje:<texto>` | Habla con AURA como en el panel: entiende lenguaje natural y **crea, mueve o edita** eventos de verdad. |
+| `/imagen [vista] [fecha]` | Envía una imagen PNG del calendario (día o semana). |
 | `/agenda [fecha]` | Eventos de un día (`hoy`, `mañana`, `25/10`, `2026-10-25`). Sin fecha, hoy. |
 | `/semana` | Resumen de los próximos siete días. |
 | `/nuevo titulo:<texto> [fecha] [hora] [duracion] [lugar]` | Crea un evento. Sin hora usa la próxima en punto; sin duración, 30 min. |
 | `/borrar titulo:<texto>` | Busca por título y pide confirmación con botones. |
+
+## Imágenes del calendario
+
+En el chat basta con pedirlo:
+
+- «mándame una foto de la agenda»
+- «cómo se ve mi semana»
+- «pásame el calendario de mañana»
+
+También con `/imagen vista:Semana fecha:2026-11-02`.
+
+La imagen se dibuja en el propio servidor (SVG → PNG con `@resvg/resvg-js`): no consume tokens de la
+IA ni depende del proveedor. La vista de día lista los eventos con su hora y color de categoría; la
+de semana pinta los siete días y resalta el de hoy.
 
 Todo menos `/vincular` y `/desvincular` exige tener la cuenta vinculada; si no, el bot te recuerda
 dónde se genera el código.

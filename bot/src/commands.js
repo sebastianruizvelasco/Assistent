@@ -16,6 +16,17 @@ export const commands = [
     .setDescription('Quita el vínculo entre este Discord y tu cuenta de AURA'),
 
   new SlashCommandBuilder()
+    .setName('imagen')
+    .setDescription('Envía una imagen del calendario')
+    .addStringOption((option) => option
+      .setName('vista')
+      .setDescription('Día o semana')
+      .addChoices({ name: 'Día', value: 'day' }, { name: 'Semana', value: 'week' }))
+    .addStringOption((option) => option
+      .setName('fecha')
+      .setDescription('hoy, mañana, 25/10 o 2026-10-25')),
+
+  new SlashCommandBuilder()
     .setName('agenda')
     .setDescription('Muestra los eventos de un día')
     .addStringOption((option) => option
