@@ -1,4 +1,6 @@
-# React + TypeScript + Vite
+# AURA
+
+[![CI](https://github.com/sebastianruizvelasco/Assistent/actions/workflows/ci.yml/badge.svg)](https://github.com/sebastianruizvelasco/Assistent/actions/workflows/ci.yml)
 
 Asistente personal de calendario hecho con React, TypeScript y Vite. Incluye inicio de sesión opcional con Supabase y sincronización de los datos de agenda por usuario.
 
