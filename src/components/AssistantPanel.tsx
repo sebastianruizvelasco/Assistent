@@ -15,6 +15,8 @@ type AssistantPanelProps = {
   aiSettingsOpen: boolean
   aiSettings: AiSettings
   updateAiSetting: (provider: keyof typeof providerModels, key: "apiKey" | "model", value: string) => void
+  // Resumen real del día; lo calcula PlannerApp a partir de la agenda.
+  insight: string
   // Escribe las claves en la cuenta al instante: sin esperar al guardado con retardo.
   onSaveCredentials: () => Promise<void>
   scheduleProposal: { date: string; changes: ScheduleChange[]; summary: string; } | null
@@ -42,7 +44,7 @@ type AssistantPanelProps = {
 export function AssistantPanel({
   activeSection, selectedProvider, handleProviderChange, setAiSettingsOpen, selectedModel,
   setSelectedModel, setAiSettings, aiSettingsOpen, aiSettings, updateAiSetting,
-  onSaveCredentials,
+  onSaveCredentials, insight,
   scheduleProposal, events, setScheduleProposal, selectedDateKey, applyScheduleProposal,
   conversation, isThinking, applyCommand, activeConversationId, setActiveConversationId,
   conversationSessions, duplicateCurrentConversation, startNewConversation, message, setMessage,
@@ -142,13 +144,15 @@ export function AssistantPanel({
       </div>
 
       <div className="conversation" ref={scrollRef} aria-live="polite">
-        <div className="insight">
-          <span className="insight-icon"><SparkIcon size={16} /></span>
-          <div>
-            <strong>Una pequeña observación</strong>
-            <p>Tu tarde tiene 45 min de margen. Es un buen momento para cerrar el día sin prisa.</p>
+        {insight && (
+          <div className="insight">
+            <span className="insight-icon"><SparkIcon size={16} /></span>
+            <div>
+              <strong>Hoy, en resumen</strong>
+              <p>{insight}</p>
+            </div>
           </div>
-        </div>
+        )}
         {conversation.map((item, index) => <div key={`${item.text}-${index}`} className={`message ${item.from}`}><p>{item.text}</p></div>)}
         {isThinking && <div className="message assistant thinking"><div className="typing-indicator" aria-label="El modelo está escribiendo"><span className="dot one" /><span className="dot two" /><span className="dot three" /></div></div>}
       </div>

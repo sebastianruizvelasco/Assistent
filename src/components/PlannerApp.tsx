@@ -26,15 +26,17 @@ import { backupFileName, createBackup, downloadText, eventsToIcs, icsFileName, p
 import { mergeSnapshots } from '../lib/snapshot-merge'
 import { disablePush, enablePush, getPushState } from '../lib/push'
 import type { PushState } from '../lib/push'
+import { clampProgress, nextMemoryId, nextProjectId, PROJECT_COLORS } from '../lib/projects'
+import { dayInsight } from '../lib/insight'
 import { mergeAiSettings, readStored, snapshotForCloud } from '../lib/snapshot'
-import type { AiSettings, AppSnapshot, CalendarView, ConversationMessage, ConversationSession, EventItem, Memory, Project, ScheduleChange } from '../types'
+import type { AiSettings, AppSnapshot, CalendarView, ConversationMessage, ConversationSession, EventItem, Memory, Project, ProjectFilter, ScheduleChange } from '../types'
 
 export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot, localApiKeyStorageKey, onLinkDiscord }: { snapshot?: AppSnapshot; user?: UserProfile; onSignOut?: () => void; onSaveSnapshot?: (data: AppSnapshot) => Promise<void>; localApiKeyStorageKey?: string; onLinkDiscord?: () => Promise<{ code: string; expiresAt: string }> }) {
   const user = userProp ?? profileFromUser(null)
   const aiSettingsStorageKey = localApiKeyStorageKey || 'aura-ai-settings'
   const [events, setEvents] = useState<EventItem[]>(() => snapshot?.events || readStored('aura-events', buildInitialEvents()))
   const [message, setMessage] = useState('')
-  const [activeSection, setActiveSection] = useState('Mi día')
+  const [activeSection, setActiveSection] = useState('Mi dÃƒÂ­a')
   const [searchOpen, setSearchOpen] = useState(false)
   const [search, setSearch] = useState('')
   const [profileOpen, setProfileOpen] = useState(false)
@@ -56,8 +58,8 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const [conversationSessions, setConversationSessions] = useState<ConversationSession[]>(() => snapshot?.conversationSessions || (() => {
     const savedSessions = readStored<ConversationSession[]>('aura-conversations', [])
     if (savedSessions.length) return savedSessions
-    return [{ id: 'conversation-1', title: 'Conversación actual', messages: readStored('aura-conversation', [
-      { from: 'assistant', text: 'Buenos días, Alex. He dejado espacio para que el día respire. ¿Qué quieres ajustar?' },
+    return [{ id: 'conversation-1', title: 'ConversaciÃƒÂ³n actual', messages: readStored('aura-conversation', [
+      { from: 'assistant', text: 'Buenos dÃƒÂ­as, Alex. He dejado espacio para que el dÃƒÂ­a respire. Ã‚Â¿QuÃƒÂ© quieres ajustar?' },
     ]) }]
   })())
   const [activeConversationId, setActiveConversationId] = useState(() => snapshot?.activeConversationId || localStorage.getItem('aura-active-conversation') || 'conversation-1')
@@ -82,6 +84,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const [memories, setMemories] = useState<Memory[]>(() => snapshot?.memories || readStored('aura-memories', initialMemories))
   const [projectFormOpen, setProjectFormOpen] = useState(false)
   const [memoryFormOpen, setMemoryFormOpen] = useState(false)
+  const [projectFilter, setProjectFilter] = useState<ProjectFilter>('todos')
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
   const [pendingMessage, setPendingMessage] = useState('')
   const { localTime, timeZone } = useClock()
@@ -89,7 +92,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const { notice, showNotice } = useNotice()
   useLocalPersistence({ events, projects, memories, aiSettings, aiSettingsStorageKey, conversationSessions, activeConversationId })
   useCloudSync({ events, projects, memories, aiSettings, conversationSessions, activeConversationId, darkMode, selectedDateKey, calendarView }, onSaveSnapshot, showNotice)
-  // Recordatorios push: si están activos, el bot avisa y no hace falta el temporizador local.
+  // Recordatorios push: si estÃƒÂ¡n activos, el bot avisa y no hace falta el temporizador local.
   const [pushState, setPushState] = useState<PushState>('off')
   useEffect(() => { void getPushState().then(setPushState).catch(() => setPushState('unsupported')) }, [])
 
@@ -102,7 +105,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
       } else {
         await enablePush()
         setPushState('on')
-        showNotice('Recordatorios activados: te avisaré aunque AURA esté cerrada.')
+        showNotice('Recordatorios activados: te avisarÃƒÂ© aunque AURA estÃƒÂ© cerrada.')
       }
     } catch (error) {
       showNotice(error instanceof Error ? error.message : 'No pude cambiar los recordatorios.')
@@ -124,7 +127,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
       await onSaveSnapshot(snapshotForCloud({ events, projects, memories, aiSettings, conversationSessions, activeConversationId, darkMode, selectedDateKey, calendarView }))
       onSignOut?.()
     } catch {
-      showNotice('No pude guardar los últimos cambios; mantuve la sesión abierta para reintentar.')
+      showNotice('No pude guardar los ÃƒÂºltimos cambios; mantuve la sesiÃƒÂ³n abierta para reintentar.')
     }
   }
 
@@ -136,7 +139,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   const google = useGoogleCalendar({ events, setEvents, showNotice, confirmAction, timeZone })
 
-  // Dictado real con el micrófono del sistema: el texto reconocido se añade al mensaje, no se envía solo.
+  // Dictado real con el micrÃƒÂ³fono del sistema: el texto reconocido se aÃƒÂ±ade al mensaje, no se envÃƒÂ­a solo.
   const dictation = useDictation({
     onTranscript: (text) => setMessage((current) => (current.trim() ? `${current.trim()} ${text}` : text)),
     onError: showNotice,
@@ -144,7 +147,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
 
   const toggleVoice = () => dictation.toggle()
 
-  // Exportación e importación: .ics para llevar la agenda a otro calendario y .json como copia.
+  // ExportaciÃƒÂ³n e importaciÃƒÂ³n: .ics para llevar la agenda a otro calendario y .json como copia.
   const exportIcs = () => {
     downloadText(icsFileName(), eventsToIcs(events, { calendarName: 'AURA' }), 'text/calendar')
     showNotice(`Exportados ${events.length} evento${events.length === 1 ? '' : 's'} a .ics.`)
@@ -160,7 +163,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     try {
       const parsed = parseBackup(JSON.parse(await file.text()))
       if (!parsed) throw new Error('El archivo no tiene el formato de una copia de AURA.')
-      // Lo importado manda sobre lo que ya hay para los mismos ids; se conserva lo que no venía.
+      // Lo importado manda sobre lo que ya hay para los mismos ids; se conserva lo que no venÃƒÂ­a.
       const merged = mergeSnapshots(parsed, { events, projects, memories })
       setEvents(merged.events || [])
       setProjects(merged.projects || [])
@@ -182,18 +185,18 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     input.click()
   }
 
-  // Genera el código de vinculación de Discord y lo muestra en un modal para copiarlo.
+  // Genera el cÃƒÂ³digo de vinculaciÃƒÂ³n de Discord y lo muestra en un modal para copiarlo.
   const linkDiscordAccount = async () => {
-    if (!onLinkDiscord) { showNotice('Inicia sesión para vincular tu cuenta de Discord.'); return }
+    if (!onLinkDiscord) { showNotice('Inicia sesiÃƒÂ³n para vincular tu cuenta de Discord.'); return }
     try {
       setDiscordLink(await onLinkDiscord())
     } catch (error) {
-      showNotice(error instanceof Error ? error.message : 'No pude generar el código de Discord.')
+      showNotice(error instanceof Error ? error.message : 'No pude generar el cÃƒÂ³digo de Discord.')
     }
   }
 
   // Guarda las claves en la cuenta al instante. El guardado normal espera 1,2 s y se pierde si
-  // se recarga la página justo después, que es lo que dejaba al bot sin clave.
+  // se recarga la pÃƒÂ¡gina justo despuÃƒÂ©s, que es lo que dejaba al bot sin clave.
   const saveCredentials = async () => {
     if (!onSaveSnapshot) { showNotice('Modo local: la clave solo se guarda en este navegador.'); return }
     try {
@@ -238,10 +241,10 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
   const removeEvent = (eventId: number) => {
     const event = events.find((item) => item.id === eventId)
     if (!event) return
-    confirmAction(`Confirma la eliminación de “${event.title}”.`, () => {
+    confirmAction(`Confirma la eliminaciÃƒÂ³n de Ã¢â‚¬Å“${event.title}Ã¢â‚¬Â.`, () => {
       setEvents((current) => current.filter((item) => item.id !== eventId))
       setEventMenuId(null)
-      showNotice(`${event.title} se ha eliminado de tu día.`)
+      showNotice(`${event.title} se ha eliminado de tu dÃƒÂ­a.`)
     })
   }
 
@@ -249,10 +252,10 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     const event = events.find((item) => item.id === eventId)
     if (!event || !event.recurrence || event.recurrence === 'No se repite') return
     const seriesEvents = events.filter((item) => event.seriesId ? item.seriesId === event.seriesId : item.title === event.title && item.recurrence === event.recurrence)
-    confirmAction(`Confirma la eliminación de las ${seriesEvents.length} ocurrencias de “${event.title}”.`, () => {
+    confirmAction(`Confirma la eliminaciÃƒÂ³n de las ${seriesEvents.length} ocurrencias de Ã¢â‚¬Å“${event.title}Ã¢â‚¬Â.`, () => {
       setEvents((current) => current.filter((item) => event.seriesId ? item.seriesId !== event.seriesId : item.title !== event.title || item.recurrence !== event.recurrence))
       setEventMenuId(null)
-      showNotice(`Se eliminó la serie de “${event.title}”.`)
+      showNotice(`Se eliminÃƒÂ³ la serie de Ã¢â‚¬Å“${event.title}Ã¢â‚¬Â.`)
     })
   }
 
@@ -345,17 +348,17 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     const customReminderUnit = String(formData.get('customReminderUnit') || 'minutos')
     const reminder = reminderChoice === 'Personalizado' ? `${customReminderValue} ${customReminderUnit} antes` : reminderChoice
     if (!title) return
-    if (!Number.isFinite(durationValue) || durationValue <= 0) { showNotice('La duración debe ser mayor que cero.'); return }
+    if (!Number.isFinite(durationValue) || durationValue <= 0) { showNotice('La duraciÃƒÂ³n debe ser mayor que cero.'); return }
     if (reminderChoice === 'Personalizado' && (!Number.isFinite(customReminderValue) || customReminderValue <= 0)) { showNotice('El recordatorio debe ser mayor que cero.'); return }
     let scheduledDate = date
     let scheduledTime = time
-    if (flexibilityMode === 'minutes' && (!Number.isFinite(flexibilityMinutesValue) || flexibilityMinutesValue < 0)) { showNotice('La flexibilidad en minutos no es válida.'); return }
+    if (flexibilityMode === 'minutes' && (!Number.isFinite(flexibilityMinutesValue) || flexibilityMinutesValue < 0)) { showNotice('La flexibilidad en minutos no es vÃƒÂ¡lida.'); return }
     if (flexibilityMode === 'window') {
       flexibilityStart = String(formData.get('flexibilityStart') || '')
       flexibilityEnd = String(formData.get('flexibilityEnd') || '')
       const start = parseLocalDateTime(flexibilityStart)
       const end = parseLocalDateTime(flexibilityEnd)
-      if (!start || !end || start >= end) { showNotice('Indica un intervalo válido, con una fecha y hora final posterior a la inicial.'); return }
+      if (!start || !end || start >= end) { showNotice('Indica un intervalo vÃƒÂ¡lido, con una fecha y hora final posterior a la inicial.'); return }
       const slot = findAvailableSlot(events.filter((event) => event.id !== formEventId), duration, flexibilityStart, flexibilityEnd)
       if (!slot) { showNotice('No hay un hueco libre que quepa en esa ventana.'); return }
       scheduledDate = slot.date
@@ -371,12 +374,12 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     const newId = Math.max(0, ...events.map((item) => item.id)) + 1
     const seriesId = recurrence === 'No se repite' ? undefined : `aura-series-${newId}-${Date.now()}`
     const baseEvent = { date: scheduledDate, time: scheduledTime, title, place, category: 'personal' as const, duration, seriesId, flexibilityMinutes: flexibilityMode === 'minutes' ? flexibilityMinutesValue : undefined, flexibilityStart, flexibilityEnd, accent: 'blue', recurrence, reminder, priority: 'media' as const, tag: 'Personal' }
-    const occurrenceCount = recurrence === 'Cada día' ? 366 : recurrence === 'Cada semana' ? 53 : recurrence === 'Cada mes' ? 13 : 1
+    const occurrenceCount = recurrence === 'Cada dÃƒÂ­a' ? 366 : recurrence === 'Cada semana' ? 53 : recurrence === 'Cada mes' ? 13 : 1
     const scheduledDateParts = scheduledDate.split('-').map(Number)
     const scheduledUtc = Date.UTC(scheduledDateParts[0], scheduledDateParts[1] - 1, scheduledDateParts[2])
     const occurrences = Array.from({ length: occurrenceCount }, (_, index) => {
       const nextDate = dateFromKey(scheduledDate)
-      if (recurrence === 'Cada día') nextDate.setDate(nextDate.getDate() + index)
+      if (recurrence === 'Cada dÃƒÂ­a') nextDate.setDate(nextDate.getDate() + index)
       if (recurrence === 'Cada semana') nextDate.setDate(nextDate.getDate() + index * 7)
       if (recurrence === 'Cada mes') {
         const originalDay = nextDate.getDate()
@@ -392,32 +395,70 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     setEvents((current) => [...current, ...occurrences])
     setSelectedDateKey(scheduledDate)
     setAddEventOpen(false)
-    showNotice(`${title} añadido para el ${formatEventDate(scheduledDate)} a las ${scheduledTime}.`)
+    showNotice(`${title} aÃƒÂ±adido para el ${formatEventDate(scheduledDate)} a las ${scheduledTime}.`)
   }
 
   const addProject = (formData: FormData) => {
     const name = String(formData.get('name') || '').trim()
-    const description = String(formData.get('description') || '').trim()
     if (!name) return
-    setProjects((current) => [...current, { id: Math.max(0, ...current.map((item) => item.id)) + 1, name, description: description || 'Nuevo proyecto', progress: 0, color: 'blue', due: 'Sin fecha' }])
+    const description = String(formData.get('description') || '').trim()
+    const due = String(formData.get('due') || '').trim()
+    const color = String(formData.get('color') || 'blue')
+    setProjects((current) => [...current, {
+      id: nextProjectId(current),
+      name,
+      description: description || 'Nuevo proyecto',
+      progress: 0,
+      color: PROJECT_COLORS.includes(color as typeof PROJECT_COLORS[number]) ? color : 'blue',
+      due,
+    }])
     setProjectFormOpen(false)
     showNotice(`${name} creado.`)
+  }
+
+  const updateProject = (id: number, patch: Partial<Project>) => {
+    setProjects((current) => current.map((project) => (project.id === id
+      ? { ...project, ...patch, progress: patch.progress !== undefined ? clampProgress(patch.progress) : project.progress }
+      : project)))
+  }
+
+  const removeProject = (id: number) => {
+    const project = projects.find((item) => item.id === id)
+    if (!project) return
+    confirmAction(`Confirma la eliminaciÃƒÂ³n del proyecto Ã¢â‚¬Å“${project.name}Ã¢â‚¬Â.`, () => {
+      setProjects((current) => current.filter((item) => item.id !== id))
+      showNotice(`${project.name} eliminado.`)
+    })
   }
 
   const addMemory = (formData: FormData) => {
     const title = String(formData.get('title') || '').trim()
     const content = String(formData.get('content') || '').trim()
     if (!title || !content) return
-    setMemories((current) => [...current, { id: Math.max(0, ...current.map((item) => item.id)) + 1, title, content, category: 'Nueva nota' }])
+    const category = String(formData.get('category') || 'General')
+    setMemories((current) => [...current, { id: nextMemoryId(current), title, content, category }])
     setMemoryFormOpen(false)
     showNotice('Memoria guardada.')
+  }
+
+  const updateMemory = (id: number, patch: Partial<Memory>) => {
+    setMemories((current) => current.map((memory) => (memory.id === id ? { ...memory, ...patch } : memory)))
+  }
+
+  const removeMemory = (id: number) => {
+    const memory = memories.find((item) => item.id === id)
+    if (!memory) return
+    confirmAction(`Confirma la eliminaciÃƒÂ³n de la memoria Ã¢â‚¬Å“${memory.title}Ã¢â‚¬Â.`, () => {
+      setMemories((current) => current.filter((item) => item.id !== id))
+      showNotice('Memoria eliminada.')
+    })
   }
 
   const applyScheduleProposal = () => {
     if (!scheduleProposal || scheduleProposal.date !== selectedDateKey) return
     const dayEvents = events.filter((event) => event.date === scheduleProposal.date)
     const validationError = validateSchedule(dayEvents, scheduleProposal.changes)
-    if (validationError) { setScheduleProposal(null); showNotice('La agenda cambió. Genera una nueva propuesta.'); return }
+    if (validationError) { setScheduleProposal(null); showNotice('La agenda cambiÃƒÂ³. Genera una nueva propuesta.'); return }
     const changes = new Map(scheduleProposal.changes.map((change) => [change.id, change.time]))
     setEvents((current) => current.map((event) => event.date === scheduleProposal.date && changes.has(event.id) ? { ...event, time: changes.get(event.id)! } : event))
     setScheduleProposal(null)
@@ -450,7 +491,7 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     setSelectedDateKey(dateKeyFromDate(nextDate))
   }
 
-  const { isThinking, applyCommand, organizeSelectedDay } = useAssistant({ events, setEvents, memories, selectedDateKey, setSelectedDateKey, setCalendarView, conversation, setConversation, setMessage, confirmAction, showNotice, timeZone, selectedProvider, selectedModel, aiSettings, setScheduleProposal })
+  const { isThinking, applyCommand, organizeSelectedDay } = useAssistant({ events, setEvents, memories, setMemories, projects, setProjects, selectedDateKey, setSelectedDateKey, setCalendarView, setActiveSection, conversation, setConversation, setMessage, confirmAction, showNotice, timeZone, selectedProvider, selectedModel, aiSettings, setScheduleProposal })
 
   const duplicateCurrentConversation = () => {
     if (!activeConversation) return
@@ -458,15 +499,15 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
     setConversationSessions((current) => [...current, { ...activeConversation, id: duplicateId, title: `Copia de ${activeConversation.title}`, messages: [...activeConversation.messages] }])
     setActiveConversationId(duplicateId)
     setScheduleProposal(null)
-    showNotice('He duplicado la conversación. La copia es independiente de la original.')
+    showNotice('He duplicado la conversaciÃƒÂ³n. La copia es independiente de la original.')
   }
 
   const startNewConversation = () => {
     const conversationId = `conversation-${conversationSessions.length + 1}`
-    setConversationSessions((current) => [...current, { id: conversationId, title: `Conversación ${current.length + 1}`, messages: [{ from: 'assistant', text: 'Conversación nueva. ¿Qué te gustaría planificar?' }] }])
+    setConversationSessions((current) => [...current, { id: conversationId, title: `ConversaciÃƒÂ³n ${current.length + 1}`, messages: [{ from: 'assistant', text: 'ConversaciÃƒÂ³n nueva. Ã‚Â¿QuÃƒÂ© te gustarÃƒÂ­a planificar?' }] }])
     setActiveConversationId(conversationId)
     setScheduleProposal(null)
-    showNotice('He iniciado una conversación nueva.')
+    showNotice('He iniciado una conversaciÃƒÂ³n nueva.')
   }
 
   const moveEvent = (targetId: number) => {
@@ -497,20 +538,38 @@ export function PlannerApp({ snapshot, user: userProp, onSignOut, onSaveSnapshot
       <Topbar google={google} activeSection={activeSection} setActiveSection={setActiveSection} showNotice={showNotice} searchOpen={searchOpen} search={search} setSearch={setSearch} setSearchOpen={setSearchOpen} darkMode={darkMode} toggleTheme={toggleTheme} setProfileOpen={setProfileOpen} profileOpen={profileOpen} user={user} onSignOut={onSignOut} persistBeforeSignOut={persistBeforeSignOut} onLinkDiscord={onLinkDiscord ? () => { void linkDiscordAccount() } : undefined} onExportIcs={exportIcs} onExportBackup={exportBackup} onImportBackup={pickBackupFile} pushState={pushState} onTogglePush={() => { void togglePush() }} />
 
       <div className="workspace">
-        {activeSection !== 'Mi día' && <SectionHub activeSection={activeSection} setProjectFormOpen={setProjectFormOpen} projects={projects} projectFormOpen={projectFormOpen} addProject={addProject} setMemoryFormOpen={setMemoryFormOpen} memories={memories} memoryFormOpen={memoryFormOpen} addMemory={addMemory} />}
-        <section className={`agenda-column ${activeSection !== 'Mi día' ? 'section-hidden' : ''}`}>
+        {activeSection !== 'Mi dÃƒÂ­a' && (
+        <SectionHub
+          activeSection={activeSection}
+          projects={projects}
+          projectFilter={projectFilter}
+          setProjectFilter={setProjectFilter}
+          projectFormOpen={projectFormOpen}
+          setProjectFormOpen={setProjectFormOpen}
+          addProject={addProject}
+          updateProject={updateProject}
+          removeProject={removeProject}
+          memories={memories}
+          memoryFormOpen={memoryFormOpen}
+          setMemoryFormOpen={setMemoryFormOpen}
+          addMemory={addMemory}
+          updateMemory={updateMemory}
+          removeMemory={removeMemory}
+        />
+      )}
+        <section className={`agenda-column ${activeSection !== 'Mi dÃƒÂ­a' ? 'section-hidden' : ''}`}>
           <CalendarHeader setSelectedDateKey={setSelectedDateKey} setNewEventDate={setNewEventDate} showNotice={showNotice} changeCalendarDate={changeCalendarDate} selectedDate={selectedDate} calendarView={calendarView} selectedDateObject={selectedDateObject} setDateMenuOpen={setDateMenuOpen} dateMenuOpen={dateMenuOpen} setCalendarView={setCalendarView} localTime={localTime} timeZone={timeZone} temperature={temperature} city={city} events={events} openAddEvent={openAddEvent} />
           <CalendarBody setEvents={setEvents} conflictIds={conflictIds} editingEventId={editingEventId} setDraggedId={setDraggedId} moveEvent={moveEvent} toggleComplete={toggleComplete} setEditingEventId={setEditingEventId} setEventMenuId={setEventMenuId} eventMenuId={eventMenuId} openEditEvent={openEditEvent} duplicateEvent={duplicateEvent} removeEvent={removeEvent} removeEventSeries={removeEventSeries} visibleEvents={visibleEvents} selectedDateKey={selectedDateKey} selectedDateObject={selectedDateObject} dragSelection={dragSelection} currentHour={currentHour} beginTimeSelection={beginTimeSelection} updateTimeSelection={updateTimeSelection} finishTimeSelection={finishTimeSelection} moveEventToTime={moveEventToTime} currentMinute={currentMinute} openAddEvent={openAddEvent} weekDays={weekDays} setSelectedDateKey={setSelectedDateKey} setCalendarView={setCalendarView} monthCells={monthCells} monthDays={monthDays} calendarView={calendarView} />
         </section>
-        <ProductivityPanel activeSection={activeSection} completedCount={completedCount} selectedDayEvents={selectedDayEvents} totalMinutes={totalMinutes} conflictIds={conflictIds} priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter} setShowCompleted={setShowCompleted} showCompleted={showCompleted} isThinking={isThinking} organizeSelectedDay={organizeSelectedDay} events={events} openEditEvent={openEditEvent} removeEvent={removeEvent} />
+        <ProductivityPanel activeSection={activeSection} completedCount={completedCount} selectedDayEvents={selectedDayEvents} totalMinutes={totalMinutes} conflictIds={conflictIds} priorityFilter={priorityFilter} setPriorityFilter={setPriorityFilter} setShowCompleted={setShowCompleted} showCompleted={showCompleted} isThinking={isThinking} organizeSelectedDay={organizeSelectedDay} />
 
-        <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} onSaveCredentials={saveCredentials} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={dictation.listening} voiceSupported={dictation.supported} voiceRequesting={dictation.requesting} voiceInterim={dictation.interim} toggleVoice={toggleVoice} />
+        <AssistantPanel activeSection={activeSection} selectedProvider={selectedProvider} handleProviderChange={handleProviderChange} setAiSettingsOpen={setAiSettingsOpen} selectedModel={selectedModel} setSelectedModel={setSelectedModel} setAiSettings={setAiSettings} aiSettingsOpen={aiSettingsOpen} aiSettings={aiSettings} updateAiSetting={updateAiSetting} onSaveCredentials={saveCredentials} insight={dayInsight(events, selectedDateKey)} scheduleProposal={scheduleProposal} events={events} setScheduleProposal={setScheduleProposal} selectedDateKey={selectedDateKey} applyScheduleProposal={applyScheduleProposal} conversation={conversation} isThinking={isThinking} applyCommand={applyCommand} activeConversationId={activeConversationId} setActiveConversationId={setActiveConversationId} conversationSessions={conversationSessions} duplicateCurrentConversation={duplicateCurrentConversation} startNewConversation={startNewConversation} message={message} setMessage={setMessage} voiceActive={dictation.listening} voiceSupported={dictation.supported} voiceRequesting={dictation.requesting} voiceInterim={dictation.interim} toggleVoice={toggleVoice} />
       </div>
       {notice && <div className="notice" role="status">{notice}</div>}
-      {pendingAction && <div className="confirm-bar" role="alert"><span>{pendingMessage || '¿Quieres continuar?'}</span><button onClick={() => { pendingAction(); setPendingAction(null); setPendingMessage('') }}>Confirmar</button><button onClick={() => { setPendingAction(null); setPendingMessage('') }}>Cancelar</button></div>}
+      {pendingAction && <div className="confirm-bar" role="alert"><span>{pendingMessage || 'Ã‚Â¿Quieres continuar?'}</span><button onClick={() => { pendingAction(); setPendingAction(null); setPendingMessage('') }}>Confirmar</button><button onClick={() => { setPendingAction(null); setPendingMessage('') }}>Cancelar</button></div>}
       <AddEventModal addEventOpen={addEventOpen} setAddEventOpen={setAddEventOpen} addEvent={addEvent} formEventId={formEventId} events={events} newEventDate={newEventDate} newEventTime={newEventTime} newEventDuration={newEventDuration} flexibilityMode={flexibilityMode} setFlexibilityMode={setFlexibilityMode} reminderCustomEnabled={reminderCustomEnabled} setReminderCustomEnabled={setReminderCustomEnabled} requestNotifications={requestNotifications} />
       <DiscordLinkModal link={discordLink} onClose={() => setDiscordLink(null)} showNotice={showNotice} />
-      <footer><span>Planificado con intención</span><span>Última sincronización: ahora</span></footer>
+      <footer><span>Planificado con intenciÃƒÂ³n</span><span>ÃƒÅ¡ltima sincronizaciÃƒÂ³n: ahora</span></footer>
     </main>
   )
 }

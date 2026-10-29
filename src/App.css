@@ -535,6 +535,43 @@ select {
 .memory-card p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
 .memory-form { max-width: 800px; }
 
+/* ---------- Proyectos y memorias: barra de filtros, acciones y edición ---------- */
+.hub-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 18px 0 6px; }
+.hub-filters { display: flex; gap: 6px; }
+.hub-chip { padding: 7px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; }
+.hub-chip:hover { border-color: var(--primary); color: var(--primary-text); }
+.hub-chip.active { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-text); }
+.hub-summary { margin: 0; color: var(--faint); font-size: 12px; }
+.hub-search { flex: 1; min-width: 200px; max-width: 420px; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); outline: 0; background: var(--surface); color: var(--text); font-size: 13px; }
+.hub-search:focus { border-color: var(--primary); }
+.hub-field { display: flex; flex-direction: column; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.hub-empty { margin-top: 26px; padding: 28px; border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface-2); text-align: center; }
+.hub-empty strong { display: block; color: var(--text); font: 500 18px var(--font-display); }
+.hub-empty p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.project-card.is-done { opacity: .78; }
+.project-status { flex: none; align-self: flex-start; padding: 4px 9px; border-radius: 999px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; background: var(--surface-3); color: var(--muted); }
+.project-status.active { background: var(--primary-soft); color: var(--primary-text); }
+.project-status.done { background: var(--ev-green-bg); color: var(--ev-green-bd); }
+.project-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.project-actions button, .memory-actions button { padding: 5px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+.project-actions button:hover, .memory-actions button:hover { border-color: var(--primary); color: var(--primary-text); }
+.project-actions .danger-link, .memory-actions .danger-link { color: var(--danger); }
+.project-actions .danger-link:hover, .memory-actions .danger-link:hover { border-color: var(--danger); color: var(--danger); }
+.project-card footer .due-overdue { color: var(--danger); font-weight: 600; }
+.project-card footer .due-soon { color: var(--warning); font-weight: 600; }
+.project-edit, .memory-edit { display: grid; gap: 8px; margin-top: 12px; }
+.project-edit input, .project-edit select, .memory-edit input, .memory-edit textarea, .memory-edit select { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; outline: 0; background: var(--surface); color: var(--text); font-size: 12px; }
+.project-edit input:focus, .memory-edit input:focus, .memory-edit textarea:focus { border-color: var(--primary); }
+.project-edit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.project-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.project-edit-actions button { padding: 7px 12px; font-size: 12px; }
+.memory-edit textarea { min-height: 70px; resize: vertical; }
+.memory-group { max-width: 800px; padding-top: 22px; }
+.memory-group-title { margin: 0; color: var(--faint); font: 700 11px var(--font-body); letter-spacing: .1em; text-transform: uppercase; }
+.memory-card { grid-template-columns: 38px 1fr auto; }
+.memory-actions { display: flex; flex-direction: column; gap: 6px; }
+.memory-card .memory-edit { grid-column: 2 / -1; }
+
 /* ---------- Acceso y carga ---------- */
 .auth-screen {
   min-height: 100vh; display: grid; place-items: center; padding: 24px; color: var(--text); font-family: var(--font-body);

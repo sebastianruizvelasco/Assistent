@@ -2,16 +2,21 @@ import { useState, type Dispatch, type SetStateAction } from 'react'
 import { buildAssistantContext, buildSeriesCatalog, parseAssistantResult, parseJsonPayload, requestAssistant } from '../lib/assistant'
 import { dateFromKey, dateKeyFromDate, defaultDateForTime, formatEventDate, hasExplicitDate, isValidDateKey, nextAvailableTime, parseLocalDateTime } from '../lib/dates'
 import { buildWeeklySeries, findAvailableSlot, isValidWeeklySchedule, validateSchedule } from '../lib/schedule'
-import { findEventsByMention, isDeleteIntent, parseMentionedTime } from '../lib/text'
-import type { AiSettings, CalendarView, ConversationMessage, EventItem, Memory, ProviderKey, ScheduleChange, ScheduleProposal } from '../types'
+import { findEventsByMention, isDeleteIntent, normalizeText, parseMentionedTime } from '../lib/text'
+import type { AiSettings, CalendarView, ConversationMessage, EventItem, Memory, Project, ProviderKey, ScheduleChange, ScheduleProposal } from '../types'
+import { clampProgress, nextMemoryId, nextProjectId, PROJECT_COLORS } from '../lib/projects'
 
 type AssistantParams = {
   events: EventItem[]
   setEvents: Dispatch<SetStateAction<EventItem[]>>
   memories: Memory[]
+  setMemories: Dispatch<SetStateAction<Memory[]>>
+  projects: Project[]
+  setProjects: Dispatch<SetStateAction<Project[]>>
   selectedDateKey: string
   setSelectedDateKey: Dispatch<SetStateAction<string>>
   setCalendarView: Dispatch<SetStateAction<CalendarView>>
+  setActiveSection: Dispatch<SetStateAction<string>>
   conversation: ConversationMessage[]
   setConversation: (update: ConversationMessage[] | ((current: ConversationMessage[]) => ConversationMessage[])) => void
   setMessage: Dispatch<SetStateAction<string>>
@@ -25,7 +30,7 @@ type AssistantParams = {
 }
 
 // Interpreta lo que escribe la persona: comandos locales sencillos o una consulta al modelo de IA.
-export function useAssistant({ events, setEvents, memories, selectedDateKey, setSelectedDateKey, setCalendarView, conversation, setConversation, setMessage, confirmAction, showNotice, timeZone, selectedProvider, selectedModel, aiSettings, setScheduleProposal }: AssistantParams) {
+export function useAssistant({ events, setEvents, memories, setMemories, projects, setProjects, selectedDateKey, setSelectedDateKey, setCalendarView, setActiveSection, conversation, setConversation, setMessage, confirmAction, showNotice, timeZone, selectedProvider, selectedModel, aiSettings, setScheduleProposal }: AssistantParams) {
   const [isThinking, setIsThinking] = useState(false)
   const applyCommand = async (rawMessage: string) => {
     const text = rawMessage.trim()
@@ -80,7 +85,7 @@ export function useAssistant({ events, setEvents, memories, selectedDateKey, set
       const priorUserMessages = recentConversation.filter((item) => item.from === 'user').slice(-4).map((item) => item.text)
       const dateWasSpecified = hasExplicitDate(text) || priorUserMessages.some(hasExplicitDate)
       const seriesCatalog = buildSeriesCatalog(events)
-      const assistantContext = buildAssistantContext({ localDate, localTime, timeZone, seriesCatalog, events, memories, text })
+      const assistantContext = buildAssistantContext({ localDate, localTime, timeZone, seriesCatalog, events, memories, projects, text })
       const data = await requestAssistant({ provider: selectedProvider, apiKey: aiSettings[selectedProvider].apiKey, model: selectedModel, messages: [...historyMessages, { role: 'user', content: assistantContext }] })
       const reply = data.reply || ''
       const result = parseAssistantResult(reply)
@@ -144,6 +149,42 @@ export function useAssistant({ events, setEvents, memories, selectedDateKey, set
         setSelectedDateKey(date)
         setCalendarView('day')
         setConversation((current) => [...current, { from: 'assistant', text: `Agendé “${title}” para el ${formatEventDate(date)} a las ${time}. Ya aparece en tu calendario.` }])
+      } else if (result?.action === 'create_project' && result.project) {
+        const name = result.project.name?.trim()
+        if (!name) throw new Error('La IA detectó un proyecto pero no le puso nombre. Dímelo como «crea el proyecto X».')
+        const color = PROJECT_COLORS.includes(result.project.color as typeof PROJECT_COLORS[number]) ? result.project.color as string : 'blue'
+        const project: Project = {
+          id: nextProjectId(projects),
+          name,
+          description: result.project.description?.trim() || 'Sin descripción',
+          progress: clampProgress(result.project.progress ?? 0),
+          color,
+          due: result.project.due?.trim() || '',
+        }
+        setProjects((current) => [...current, project])
+        setActiveSection('Proyectos')
+        setConversation((current) => [...current, { from: 'assistant', text: `Creé el proyecto “${name}”. Lo tienes en la pestaña Proyectos.` }])
+      } else if (result?.action === 'update_project') {
+        const wanted = normalizeText(result.targetProject || '')
+        const target = wanted ? projects.find((project) => normalizeText(project.name).includes(wanted)) : undefined
+        if (!target) throw new Error(`No encontré un proyecto que se llame “${result.targetProject || ''}”.`)
+        const patch: Partial<Project> = {}
+        if (result.project?.name?.trim()) patch.name = result.project.name.trim()
+        if (result.project?.description !== undefined) patch.description = result.project.description.trim()
+        if (result.project?.due !== undefined) patch.due = result.project.due.trim()
+        if (result.project?.color && PROJECT_COLORS.includes(result.project.color as typeof PROJECT_COLORS[number])) patch.color = result.project.color
+        if (result.project?.progress !== undefined) patch.progress = clampProgress(result.project.progress)
+        if (!Object.keys(patch).length) throw new Error('La IA no indicó qué cambiar del proyecto.')
+        setProjects((current) => current.map((project) => (project.id === target.id ? { ...project, ...patch } : project)))
+        const detail = patch.progress !== undefined ? `${patch.progress}%` : Object.keys(patch).join(', ')
+        setConversation((current) => [...current, { from: 'assistant', text: `Actualicé “${target.name}” (${detail}).` }])
+      } else if (result?.action === 'save_memory' && result.memory) {
+        const title = result.memory.title?.trim()
+        const content = result.memory.content?.trim()
+        if (!title || !content) throw new Error('Para guardar una memoria necesito un título y el contenido.')
+        const category = result.memory.category?.trim() || 'General'
+        setMemories((current) => [...current, { id: nextMemoryId(current), title, content, category }])
+        setConversation((current) => [...current, { from: 'assistant', text: `Guardé en memoria “${title}”. Lo tendré en cuenta la próxima vez.` }])
       } else {
         setConversation((current) => [...current, { from: 'assistant', text: result?.reply || reply || data.error || 'No pude obtener una respuesta.' }])
       }

@@ -81,6 +81,15 @@ El token de acceso solo vive en la memoria de la pestaña; nunca se guarda ni se
 
 La guía completa (InfinityFree, Supabase y Google) está en [`DEPLOY.md`](DEPLOY.md). El proxy de IA es `api/assistant.ts` en desarrollo y `public/api/assistant.php` en producción.
 
+## Proyectos y memoria
+
+Dos pestañas con datos propios, guardados en el mismo documento y sincronizados como el resto:
+
+- **Proyectos**: crear con nombre, descripción, fecha límite y color; ajustar el avance en pasos de 10 % o marcarlo completado; editar y eliminar; filtrar por *En curso* o *Completados* y ver la media de avance.
+- **Memoria**: crear, editar, borrar y **buscar** sin acentos; agrupadas por categoría (Preferencias, Contexto, Rutinas, Personas, Trabajo, Ideas, General).
+
+El asistente también puede tocarlos: «crea el proyecto Reforma del baño», «sube el proyecto web al 60 %» o «recuerda que prefiero reuniones por la mañana». El modelo devuelve una acción (`create_project`, `update_project`, `save_memory`), la app la aplica y te dice qué hizo.
+
 ## Copias de seguridad y exportación
 
 En el menú del perfil (arriba a la derecha):

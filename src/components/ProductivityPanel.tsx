@@ -14,15 +14,11 @@ type ProductivityPanelProps = {
   showCompleted: boolean
   isThinking: boolean
   organizeSelectedDay: () => Promise<void>
-  events: EventItem[]
-  openEditEvent: (eventId: number) => void
-  removeEvent: (eventId: number) => void
 }
 
 export function ProductivityPanel({
   activeSection, completedCount, selectedDayEvents, totalMinutes, conflictIds, priorityFilter,
-  setPriorityFilter, setShowCompleted, showCompleted, isThinking, organizeSelectedDay, events,
-  openEditEvent, removeEvent
+  setPriorityFilter, setShowCompleted, showCompleted, isThinking, organizeSelectedDay
 }: ProductivityPanelProps) {
   if (activeSection !== 'Mi día') return null
   return (
@@ -46,12 +42,6 @@ export function ProductivityPanel({
           <button className="organize-day-button" disabled={isThinking} onClick={organizeSelectedDay}><SparkIcon size={15} />{isThinking ? 'Organizando...' : 'Organizar día'}</button>
         </div>
       </div>
-      {events[0] && (
-        <div className="task-shortcuts">
-          <button className="edit-shortcut" onClick={() => openEditEvent(events[0].id)}>Editar primera tarea</button>
-          <button className="delete-shortcut" onClick={() => removeEvent(events[0].id)}>Eliminar primera tarea</button>
-        </div>
-      )}
     </div>
   )
 }

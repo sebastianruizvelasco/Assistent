@@ -94,6 +94,10 @@ El usuario quiere que el próximo chat lea este documento y pueda responder preg
 ### Otras áreas
 
 - Proyectos y memorias personales en localStorage y snapshot cloud cuando Supabase está activo.
+- **Panel de proyectos** (`ProjectsPanel`): alta con nombre, descripción, fecha límite y color; avance en pasos de 10 % o «Completar»; edición en línea; borrado con confirmación; filtros (todos / en curso / completados) y media de avance.
+- **Panel de memoria** (`MemoriesPanel`): alta, edición y borrado; búsqueda sin acentos; agrupación por categoría.
+- El asistente crea y actualiza proyectos y guarda memorias con las acciones `create_project`, `update_project` y `save_memory` (`src/hooks/useAssistant.ts`); el contexto que recibe incluye los proyectos y solo los eventos de hoy en adelante, ordenados.
+- El resumen «Hoy, en resumen» del panel del asistente se calcula con la agenda (`src/lib/insight.ts`); antes era una frase fija.
 - Tema claro/oscuro, reloj y zona horaria local, clima y ubicación si el navegador los permite.
 - Notificaciones del navegador sujetas a permiso.
 - Dictado con la Web Speech API: pide el micrófono con `getUserMedia` antes de escuchar (para que el navegador muestre el aviso), vigila que la escucha arranque de verdad y registra `[AURA dictado]` en la consola.
